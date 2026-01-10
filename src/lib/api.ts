@@ -17,6 +17,7 @@ import type {
   WorkScoreOut
 } from "./types";
 
+
 const apiBase = process.env.NEXT_PUBLIC_API_BASE ?? "";
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
 const candidateBase = apiBase || apiBaseUrl;
@@ -37,6 +38,10 @@ const defaultHeaders = {
   Pragma: "no-cache",
   Expires: "0"
 };
+
+
+
+
 
 export const api = axios.create({
   baseURL: resolvedApiBase,
