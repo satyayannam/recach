@@ -61,8 +61,8 @@ export default function Sidebar() {
   };
 
   return (
-    <aside className="fixed left-0 top-0 h-screen w-60 md:w-64 border-r border-white/10 bg-black">
-      <div className="md:hidden flex items-center justify-between px-4 py-3 border-b border-white/10">
+    <>
+      <div className="md:hidden fixed top-0 left-0 right-0 z-40 flex items-center justify-between px-4 py-3 border-b border-white/10 bg-black">
         <Link href="/" className="text-lg font-semibold" onClick={() => setOpen(false)}>
           <span className="text-purple-400">r</span>
           <span className="text-white/80">ec</span>
@@ -78,9 +78,12 @@ export default function Sidebar() {
         </button>
       </div>
 
-      <div
-        className={`flex h-full flex-col px-4 py-6 ${open ? "block" : "hidden"} md:flex`}
+      <aside
+        className={`fixed left-0 top-0 z-50 h-screen w-60 md:w-64 border-r border-white/10 bg-black transition-transform duration-200 ease-out ${
+          open ? "translate-x-0" : "-translate-x-full"
+        } md:translate-x-0`}
       >
+        <div className="flex h-full flex-col px-4 py-6">
         <div className="mb-8 hidden md:block">
           <Link href="/" className="text-xl font-semibold">
             <span className="text-purple-400">r</span>
@@ -150,7 +153,8 @@ export default function Sidebar() {
             Logout
           </button>
         ) : null}
-      </div>
-    </aside>
+        </div>
+      </aside>
+    </>
   );
 }

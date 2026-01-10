@@ -19,7 +19,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <ToastProvider>
       <Sidebar />
-      <main className="h-screen overflow-y-auto px-6 py-6 md:px-10 ml-0 md:ml-64">
+      <main className="h-screen overflow-y-auto px-6 py-6 md:px-10 ml-0 md:ml-64 pt-16 md:pt-6">
         {children}
       </main>
     </ToastProvider>
