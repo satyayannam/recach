@@ -7,6 +7,11 @@ import { getToken } from "@/lib/auth";
 import type { PublicUserOut } from "@/lib/types";
 import { useToast } from "@/components/ToastProvider";
 
+export const dynamic = "force-dynamic";
+
+const PROFILE_REFRESH_MS = 30000;
+const USER_REFRESH_MS = 30000;
+
 export default function ProfilePage() {
   const params = useParams<{ username: string }>();
   const [profile, setProfile] = useState<PublicUserOut | null>(null);
@@ -23,39 +28,72 @@ export default function ProfilePage() {
   const hasToken = Boolean(getToken());
 
   useEffect(() => {
-    const loadProfile = async () => {
-      setLoading(true);
+    let canceled = false;
+
+    const loadProfile = async (silent = false) => {
+      if (!decoded) {
+        return;
+      }
+      if (!silent) {
+        setLoading(true);
+      }
       setError("");
       try {
         const data = await getPublicProfile(decoded);
-        setProfile(data);
+        if (!canceled) {
+          setProfile(data);
+        }
       } catch (err) {
-        setError("Unable to load profile.");
+        if (!canceled) {
+          setError("Unable to load profile.");
+        }
       } finally {
-        setLoading(false);
+        if (!silent && !canceled) {
+          setLoading(false);
+        }
       }
     };
 
-    if (decoded) {
-      loadProfile();
-    }
+    loadProfile();
+    const interval = setInterval(() => {
+      loadProfile(true);
+    }, PROFILE_REFRESH_MS);
+
+    return () => {
+      canceled = true;
+      clearInterval(interval);
+    };
   }, [decoded]);
 
   useEffect(() => {
-    const loadCurrentUser = async () => {
+    let canceled = false;
+
+    const loadCurrentUser = async (silent = false) => {
       if (!hasToken) {
         setCurrentUserId(null);
         return;
       }
       try {
         const data = await getMyAchievementScore();
-        setCurrentUserId(data.user_id ?? null);
+        if (!canceled) {
+          setCurrentUserId(data.user_id ?? null);
+        }
       } catch (err) {
-        setCurrentUserId(null);
+        if (!canceled) {
+          setCurrentUserId(null);
+        }
       }
     };
 
     loadCurrentUser();
+    const interval = setInterval(() => {
+      loadCurrentUser(true);
+    }, USER_REFRESH_MS);
+
+    return () => {
+      canceled = true;
+      clearInterval(interval);
+    };
   }, [hasToken]);
 
   if (loading) {

@@ -6,6 +6,10 @@ import type { LeaderboardRow } from "@/lib/types";
 
 type LeaderboardType = "recommendations" | "achievements";
 
+export const dynamic = "force-dynamic";
+
+const LEADERBOARD_REFRESH_MS = 30000;
+
 const ACCENT_COLORS = [
   "text-blue-400",
   "text-green-400",
@@ -20,19 +24,37 @@ export default function LeaderboardPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const loadLeaderboard = async () => {
-      setLoading(true);
+    let canceled = false;
+
+    const loadLeaderboard = async (silent = false) => {
+      if (!silent) {
+        setLoading(true);
+      }
       try {
         const data = await getLeaderboard(type, 50);
-        setEntries(data ?? []);
+        if (!canceled) {
+          setEntries(data ?? []);
+        }
       } catch (err) {
-        setEntries([]);
+        if (!canceled) {
+          setEntries([]);
+        }
       } finally {
-        setLoading(false);
+        if (!silent && !canceled) {
+          setLoading(false);
+        }
       }
     };
 
     loadLeaderboard();
+    const interval = setInterval(() => {
+      loadLeaderboard(true);
+    }, LEADERBOARD_REFRESH_MS);
+
+    return () => {
+      canceled = true;
+      clearInterval(interval);
+    };
   }, [type]);
 
   return (
@@ -69,10 +91,10 @@ export default function LeaderboardPage() {
         {loading ? (
           <p className="text-sm text-white/60 py-4">Loading...</p>
         ) : null}
-        {!loading && entries.length === 0 ? (
+        {!loading && (entries ?? []).length === 0 ? (
           <p className="text-sm text-white/60 py-4">No entries yet.</p>
         ) : null}
-        {entries.map((entry, index) => {
+        {(entries ?? []).map((entry, index) => {
           const accent = ACCENT_COLORS[index % ACCENT_COLORS.length];
           const scoreClass =
             type === "recommendations" ? "text-purple-400" : "text-green-400";

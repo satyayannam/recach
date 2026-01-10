@@ -12,8 +12,14 @@ import { getToken } from "@/lib/auth";
 import type { PublicUserSearchOut } from "@/lib/types";
 import { useToast } from "@/components/ToastProvider";
 
+export const dynamic = "force-dynamic";
+
+const SEARCH_REFRESH_MS = 15000;
+const USER_REFRESH_MS = 30000;
+
 export default function SearchPage() {
   const [query, setQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
   const [results, setResults] = useState<PublicUserSearchOut[]>([]);
   const [loading, setLoading] = useState(false);
   const [hoveredId, setHoveredId] = useState<number | null>(null);
@@ -40,6 +46,17 @@ export default function SearchPage() {
   }, []);
 
   useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedQuery(query.trim());
+      setActionStatus("");
+    }, 300);
+
+    return () => clearTimeout(handler);
+  }, [query]);
+
+  useEffect(() => {
+    let canceled = false;
+
     const loadCurrentUser = async () => {
       if (!hasToken) {
         setCurrentUserId(null);
@@ -47,37 +64,73 @@ export default function SearchPage() {
       }
       try {
         const data = await getMyAchievementScore();
-        setCurrentUserId(data.user_id ?? null);
+        if (!canceled) {
+          setCurrentUserId(data.user_id ?? null);
+        }
       } catch (err) {
-        setCurrentUserId(null);
+        if (!canceled) {
+          setCurrentUserId(null);
+        }
       }
     };
 
     loadCurrentUser();
+    const interval = setInterval(() => {
+      loadCurrentUser();
+    }, USER_REFRESH_MS);
+
+    return () => {
+      canceled = true;
+      clearInterval(interval);
+    };
   }, [hasToken]);
 
   useEffect(() => {
-    const trimmed = query.trim();
-    if (!trimmed) {
-      setResults([]);
-      return;
+    let canceled = false;
+
+    const loadResults = async (silent = false) => {
+      if (!debouncedQuery) {
+        setResults([]);
+        if (!silent) {
+          setLoading(false);
+        }
+        return;
+      }
+      if (!silent) {
+        setLoading(true);
+      }
+      try {
+        const data = await searchUsers(debouncedQuery, 20);
+        if (!canceled) {
+          setResults(data ?? []);
+        }
+      } catch (err) {
+        if (!canceled) {
+          setResults([]);
+        }
+      } finally {
+        if (!silent && !canceled) {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadResults();
+    if (!debouncedQuery) {
+      return () => {
+        canceled = true;
+      };
     }
 
-    const handler = setTimeout(async () => {
-      setLoading(true);
-      setActionStatus("");
-      try {
-        const data = await searchUsers(trimmed, 20);
-        setResults(data ?? []);
-      } catch (err) {
-        setResults([]);
-      } finally {
-        setLoading(false);
-      }
-    }, 300);
+    const interval = setInterval(() => {
+      loadResults(true);
+    }, SEARCH_REFRESH_MS);
 
-    return () => clearTimeout(handler);
-  }, [query]);
+    return () => {
+      canceled = true;
+      clearInterval(interval);
+    };
+  }, [debouncedQuery]);
 
   useEffect(() => {
     if (!results.length || typeof window === "undefined") {

@@ -10,6 +10,10 @@ import {
 import { getAdminToken } from "@/lib/auth";
 import type { AdminVerification } from "@/lib/types";
 
+export const dynamic = "force-dynamic";
+
+const ADMIN_REFRESH_MS = 15000;
+
 export default function AdminVerificationsPage() {
   const router = useRouter();
   const [statusFilter, setStatusFilter] = useState("PENDING");
@@ -19,8 +23,10 @@ export default function AdminVerificationsPage() {
   const [notes, setNotes] = useState<Record<number, string>>({});
   const [error, setError] = useState("");
 
-  const loadItems = async () => {
-    setLoading(true);
+  const loadItems = async (silent = false) => {
+    if (!silent) {
+      setLoading(true);
+    }
     setError("");
     try {
       const data = await getAdminVerifications(statusFilter);
@@ -28,7 +34,9 @@ export default function AdminVerificationsPage() {
     } catch (err) {
       setError("Unable to load verifications.");
     } finally {
-      setLoading(false);
+      if (!silent) {
+        setLoading(false);
+      }
     }
   };
 
@@ -38,7 +46,11 @@ export default function AdminVerificationsPage() {
       return;
     }
     loadItems();
-  }, [statusFilter, router]);
+    const interval = setInterval(() => {
+      loadItems(true);
+    }, ADMIN_REFRESH_MS);
+    return () => clearInterval(interval);
+  }, [router, statusFilter]);
 
   const handleApprove = async (id: number) => {
     setActionId(id);
@@ -90,7 +102,7 @@ export default function AdminVerificationsPage() {
       {error ? <p className="text-sm text-white/60">{error}</p> : null}
 
       <div className="space-y-4">
-        {items.map((item) => (
+        {(items ?? []).map((item) => (
           <div key={item.id} className="border-b border-white/10 pb-4">
             <div className="space-y-1 text-sm">
               <p className="text-white/80">

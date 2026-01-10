@@ -11,6 +11,10 @@ import {
 import type { ScoreOut, UserProfile } from "@/lib/types";
 import { useToast } from "@/components/ToastProvider";
 
+export const dynamic = "force-dynamic";
+
+const PROFILE_REFRESH_MS = 30000;
+
 type FormState = {
   headline: string;
   about: string;
@@ -53,8 +57,10 @@ export default function MePage() {
   const [editing, setEditing] = useState(false);
   const { addToast } = useToast();
 
-  const loadData = async () => {
-    setLoading(true);
+  const loadData = async (silent = false) => {
+    if (!silent) {
+      setLoading(true);
+    }
     setError("");
     try {
       const [profileResult, achievementResult, recommendationResult] =
@@ -67,24 +73,28 @@ export default function MePage() {
       if (profileResult.status === "fulfilled") {
         const profileData = profileResult.value;
         setProfile(profileData);
-        setForm({
-          headline: profileData.headline ?? "",
-          about: profileData.about ?? "",
-          location: profileData.location ?? "",
-          pronouns: profileData.pronouns ?? "",
-          website_url: profileData.website_url ?? "",
-          github_url: profileData.github_url ?? "",
-          linkedin_url: profileData.linkedin_url ?? "",
-          portfolio_url: profileData.portfolio_url ?? "",
-          twitter_url: profileData.twitter_url ?? "",
-          visibility: profileData.visibility ?? "PUBLIC",
-          is_open_to_recommendations: Boolean(profileData.is_open_to_recommendations),
-          is_hiring: Boolean(profileData.is_hiring)
-        });
+        if (!editing) {
+          setForm({
+            headline: profileData.headline ?? "",
+            about: profileData.about ?? "",
+            location: profileData.location ?? "",
+            pronouns: profileData.pronouns ?? "",
+            website_url: profileData.website_url ?? "",
+            github_url: profileData.github_url ?? "",
+            linkedin_url: profileData.linkedin_url ?? "",
+            portfolio_url: profileData.portfolio_url ?? "",
+            twitter_url: profileData.twitter_url ?? "",
+            visibility: profileData.visibility ?? "PUBLIC",
+            is_open_to_recommendations: Boolean(profileData.is_open_to_recommendations),
+            is_hiring: Boolean(profileData.is_hiring)
+          });
+        }
       } else if (profileResult.reason?.response?.status === 404) {
         setProfile(null);
-        setForm(emptyForm);
-      } else {
+        if (!editing) {
+          setForm(emptyForm);
+        }
+      } else if (!silent) {
         setError("Unable to load profile.");
       }
 
@@ -107,15 +117,23 @@ export default function MePage() {
         localStorage.setItem("recach-recommendation-score", String(next));
       }
     } catch (err: any) {
-      setError("Unable to load profile.");
+      if (!silent) {
+        setError("Unable to load profile.");
+      }
     } finally {
-      setLoading(false);
+      if (!silent) {
+        setLoading(false);
+      }
     }
   };
 
   useEffect(() => {
     loadData();
-  }, []);
+    const interval = setInterval(() => {
+      loadData(true);
+    }, PROFILE_REFRESH_MS);
+    return () => clearInterval(interval);
+  }, [editing]);
 
   const normalizeValue = (value: string) => (value.trim() ? value.trim() : undefined);
 
@@ -143,6 +161,20 @@ export default function MePage() {
 
       const updated = await updateMyProfile(payload);
       setProfile(updated);
+      setForm({
+        headline: updated.headline ?? "",
+        about: updated.about ?? "",
+        location: updated.location ?? "",
+        pronouns: updated.pronouns ?? "",
+        website_url: updated.website_url ?? "",
+        github_url: updated.github_url ?? "",
+        linkedin_url: updated.linkedin_url ?? "",
+        portfolio_url: updated.portfolio_url ?? "",
+        twitter_url: updated.twitter_url ?? "",
+        visibility: updated.visibility ?? "PUBLIC",
+        is_open_to_recommendations: Boolean(updated.is_open_to_recommendations),
+        is_hiring: Boolean(updated.is_hiring)
+      });
       setSuccess("Profile updated.");
     } catch (err) {
       setError("Unable to update profile.");
@@ -182,7 +214,7 @@ export default function MePage() {
 
         {loading ? <p className="text-sm text-white/60">Loading...</p> : null}
         {error ? <p className="text-sm text-white/60">{error}</p> : null}
-      {success ? <p className="text-sm text-white/60">{success}</p> : null}
+        {success ? <p className="text-sm text-white/60">{success}</p> : null}
 
         <div className="flex items-center justify-between max-w-2xl">
           <h2 className="text-lg font-semibold">Profile details</h2>

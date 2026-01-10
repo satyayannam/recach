@@ -1,9 +1,14 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import FeedItem from "@/components/FeedItem";
 import { getFeed, getMyProfile } from "@/lib/api";
 import type { FeedItem as FeedItemType } from "@/lib/types";
+
+export const dynamic = "force-dynamic";
+
+const FEED_REFRESH_MS = 15000;
+const PROFILE_REFRESH_MS = 30000;
 
 export default function HomePage() {
   const [items, setItems] = useState<FeedItemType[]>([]);
@@ -12,8 +17,10 @@ export default function HomePage() {
   const universityCache = useRef(new Map<number, string>());
   const [myUserId, setMyUserId] = useState<number | null>(null);
 
-  const loadFeed = async () => {
-    setLoading(true);
+  const loadFeed = useCallback(async (silent = false) => {
+    if (!silent) {
+      setLoading(true);
+    }
     setError("");
     try {
       const data = await getFeed(50);
@@ -21,30 +28,43 @@ export default function HomePage() {
     } catch (err) {
       setError("Unable to load feed.");
     } finally {
-      setLoading(false);
+      if (!silent) {
+        setLoading(false);
+      }
     }
-  };
+  }, []);
+
+  const loadProfile = useCallback(async () => {
+    try {
+      const profile = await getMyProfile();
+      setMyUserId(profile.user_id);
+      const university =
+        Array.isArray(profile.university_names) && profile.university_names.length > 0
+          ? String(profile.university_names[0])
+          : null;
+      if (university) {
+        universityCache.current.set(profile.user_id, university);
+      }
+    } catch (err) {
+      setMyUserId(null);
+    }
+  }, []);
 
   useEffect(() => {
     loadFeed();
-    const loadProfile = async () => {
-      try {
-        const profile = await getMyProfile();
-        setMyUserId(profile.user_id);
-        const university =
-          Array.isArray(profile.university_names) && profile.university_names.length > 0
-            ? String(profile.university_names[0])
-            : null;
-        if (university) {
-          universityCache.current.set(profile.user_id, university);
-        }
-      } catch (err) {
-        setMyUserId(null);
-      }
-    };
+    const interval = setInterval(() => {
+      loadFeed(true);
+    }, FEED_REFRESH_MS);
+    return () => clearInterval(interval);
+  }, [loadFeed]);
 
+  useEffect(() => {
     loadProfile();
-  }, []);
+    const interval = setInterval(() => {
+      loadProfile();
+    }, PROFILE_REFRESH_MS);
+    return () => clearInterval(interval);
+  }, [loadProfile]);
 
   const resolveUniversity = (userId?: number) => {
     if (!userId) {
@@ -84,7 +104,7 @@ export default function HomePage() {
     return item.message;
   };
 
-  const displayItems = items.map((item) => ({
+  const displayItems = (items ?? []).map((item) => ({
     ...item,
     message: buildMessage(item)
   }));
@@ -99,7 +119,7 @@ export default function HomePage() {
           </p>
         </div>
         <button
-          onClick={loadFeed}
+          onClick={() => loadFeed()}
           className="border border-white/20 px-4 py-2 text-sm hover:text-white/80"
           disabled={loading}
         >

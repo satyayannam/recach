@@ -17,14 +17,37 @@ import type {
   WorkScoreOut
 } from "./types";
 
+const apiBase = process.env.NEXT_PUBLIC_API_BASE ?? "";
+const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
+const candidateBase = apiBase || apiBaseUrl;
+const isLocalBase = /localhost|127\.0\.0\.1/.test(candidateBase);
+const resolvedApiBase =
+  process.env.NODE_ENV === "production" && isLocalBase
+    ? apiBaseUrl && !/localhost|127\.0\.0\.1/.test(apiBaseUrl)
+      ? apiBaseUrl
+      : ""
+    : candidateBase;
+
+if (process.env.NODE_ENV === "production" && !resolvedApiBase) {
+  console.warn("NEXT_PUBLIC_API_BASE is not set or points to localhost in production.");
+}
+
+const defaultHeaders = {
+  "Cache-Control": "no-store",
+  Pragma: "no-cache",
+  Expires: "0"
+};
+
 export const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_BASE
+  baseURL: resolvedApiBase,
+  headers: defaultHeaders
 });
 
 
 
 export const adminApi = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_BASE
+  baseURL: resolvedApiBase,
+  headers: defaultHeaders
 });
 
 const protectedPrefixes = ["/me", "/recommendations", "/education", "/work", "/users/me"];
@@ -35,7 +58,7 @@ const resolvePathname = (url?: string) => {
   }
 
   try {
-    const base = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost";
+    const base = resolvedApiBase || "http://placeholder.local";
     return new URL(url, base).pathname;
   } catch {
     return url;
@@ -47,8 +70,8 @@ api.interceptors.request.use((config) => {
   const path = resolvePathname(config.url);
   const requiresAuth = protectedPrefixes.some((prefix) => path.startsWith(prefix));
 
+  config.headers = { ...defaultHeaders, ...(config.headers ?? {}) };
   if (token && requiresAuth) {
-    config.headers = config.headers ?? {};
     config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
@@ -69,8 +92,8 @@ api.interceptors.response.use(
 
 adminApi.interceptors.request.use((config) => {
   const token = getAdminToken();
+  config.headers = { ...defaultHeaders, ...(config.headers ?? {}) };
   if (token) {
-    config.headers = config.headers ?? {};
     config.headers.Authorization = `Bearer ${token}`;
   }
   return config;

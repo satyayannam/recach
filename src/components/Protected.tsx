@@ -16,17 +16,28 @@ export default function Protected({ children }: { children: React.ReactNode }) {
       return;
     }
 
+    let canceled = false;
     const validate = async () => {
       try {
         await getMyAchievementScore();
-        setReady(true);
+        if (!canceled) {
+          setReady(true);
+        }
       } catch (err) {
-        clearToken();
-        router.replace("/login");
+        if (!canceled) {
+          clearToken();
+          router.replace("/login");
+        }
       }
     };
 
     validate();
+    const interval = setInterval(validate, 60000);
+
+    return () => {
+      canceled = true;
+      clearInterval(interval);
+    };
   }, [router]);
 
   if (!ready) {

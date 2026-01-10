@@ -9,6 +9,11 @@ import {
 } from "@/lib/api";
 import type { PendingRecommendation } from "@/lib/types";
 
+
+export const dynamic = "force-dynamic";
+
+const INBOX_REFRESH_MS = 15000;
+
 type NoteState = {
   title: string;
   body: string;
@@ -22,8 +27,10 @@ export default function InboxPage() {
   const [notes, setNotes] = useState<Record<string | number, NoteState>>({});
   const [actionId, setActionId] = useState<string | number | null>(null);
 
-  const loadInbox = async () => {
-    setLoading(true);
+  const loadInbox = async (silent = false) => {
+    if (!silent) {
+      setLoading(true);
+    }
     setError("");
     try {
       const data = await getPendingRecommendations();
@@ -31,12 +38,18 @@ export default function InboxPage() {
     } catch (err) {
       setError("Unable to load inbox.");
     } finally {
-      setLoading(false);
+      if (!silent) {
+        setLoading(false);
+      }
     }
   };
 
   useEffect(() => {
     loadInbox();
+    const interval = setInterval(() => {
+      loadInbox(true);
+    }, INBOX_REFRESH_MS);
+    return () => clearInterval(interval);
   }, []);
 
   const handleApprove = async (requestId: string | number) => {
@@ -86,11 +99,13 @@ export default function InboxPage() {
           </p>
         </header>
 
-        {loading ? <p className="text-sm text-white/60">Loading...</p> : null}
+        {loading ? (
+          <p className="text-sm text-white/60">Loading...</p>
+        ) : null}
         {error ? <p className="text-sm text-white/60">{error}</p> : null}
 
         <div className="space-y-4">
-          {requests.map((request) => (
+          {(requests ?? []).map((request) => (
             <div key={request.id} className="border-b border-white/10 pb-4">
               <div className="space-y-1">
                 <p className="text-sm text-white/80">
