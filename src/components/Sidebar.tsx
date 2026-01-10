@@ -78,7 +78,9 @@ export default function Sidebar() {
         </button>
       </div>
 
-      <div className={`flex h-full flex-col px-4 py-6 md:block ${open ? "block" : "hidden"}`}>
+      <div
+        className={`flex h-full flex-col px-4 py-6 ${open ? "block" : "hidden"} md:flex`}
+      >
         <div className="mb-8 hidden md:block">
           <Link href="/" className="text-xl font-semibold">
             <span className="text-purple-400">r</span>

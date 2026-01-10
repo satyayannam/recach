@@ -1,16 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
 import { getMyAchievementScore, getPublicProfile, requestRecommendation } from "@/lib/api";
 import { getToken } from "@/lib/auth";
 import type { PublicUserOut } from "@/lib/types";
 import { useToast } from "@/components/ToastProvider";
 
-type ProfilePageProps = {
-  params: { username: string };
-};
-
-export default function ProfilePage({ params }: ProfilePageProps) {
+export default function ProfilePage() {
+  const params = useParams<{ username: string }>();
   const [profile, setProfile] = useState<PublicUserOut | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -21,7 +19,7 @@ export default function ProfilePage({ params }: ProfilePageProps) {
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
   const { addToast } = useToast();
 
-  const decoded = decodeURIComponent(params.username);
+  const decoded = decodeURIComponent(params?.username ?? "");
   const hasToken = Boolean(getToken());
 
   useEffect(() => {
@@ -38,7 +36,9 @@ export default function ProfilePage({ params }: ProfilePageProps) {
       }
     };
 
-    loadProfile();
+    if (decoded) {
+      loadProfile();
+    }
   }, [decoded]);
 
   useEffect(() => {
