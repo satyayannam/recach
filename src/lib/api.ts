@@ -1,4 +1,4 @@
-import axios from "axios";
+import axios, { AxiosHeaders } from "axios";
 import { clearAdminToken, clearToken, getAdminToken, getToken } from "./auth";
 import type {
   AdminVerification,
@@ -40,14 +40,14 @@ const defaultHeaders = {
 
 export const api = axios.create({
   baseURL: resolvedApiBase,
-  headers: defaultHeaders
+  headers: AxiosHeaders.from(defaultHeaders)
 });
 
 
 
 export const adminApi = axios.create({
   baseURL: resolvedApiBase,
-  headers: defaultHeaders
+  headers: AxiosHeaders.from(defaultHeaders)
 });
 
 const protectedPrefixes = ["/me", "/recommendations", "/education", "/work", "/users/me"];
@@ -70,10 +70,14 @@ api.interceptors.request.use((config) => {
   const path = resolvePathname(config.url);
   const requiresAuth = protectedPrefixes.some((prefix) => path.startsWith(prefix));
 
-  config.headers = { ...defaultHeaders, ...(config.headers ?? {}) };
-  if (token && requiresAuth) {
-    config.headers.Authorization = `Bearer ${token}`;
+  const headers = AxiosHeaders.from(defaultHeaders);
+  if (config.headers) {
+    headers.set(config.headers);
   }
+  if (token && requiresAuth) {
+    headers.set("Authorization", `Bearer ${token}`);
+  }
+  config.headers = headers;
   return config;
 });
 
@@ -92,10 +96,14 @@ api.interceptors.response.use(
 
 adminApi.interceptors.request.use((config) => {
   const token = getAdminToken();
-  config.headers = { ...defaultHeaders, ...(config.headers ?? {}) };
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+  const headers = AxiosHeaders.from(defaultHeaders);
+  if (config.headers) {
+    headers.set(config.headers);
   }
+  if (token) {
+    headers.set("Authorization", `Bearer ${token}`);
+  }
+  config.headers = headers;
   return config;
 });
 
