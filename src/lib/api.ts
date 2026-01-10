@@ -18,9 +18,10 @@ import type {
 } from "./types";
 
 
+const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "";
 const apiBase = process.env.NEXT_PUBLIC_API_BASE ?? "";
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
-const candidateBase = apiBase || apiBaseUrl;
+const candidateBase = apiUrl || apiBase || apiBaseUrl;
 const isLocalBase = /localhost|127\.0\.0\.1/.test(candidateBase);
 const resolvedApiBase =
   process.env.NODE_ENV === "production" && isLocalBase
@@ -30,7 +31,7 @@ const resolvedApiBase =
     : candidateBase;
 
 if (process.env.NODE_ENV === "production" && !resolvedApiBase) {
-  console.warn("NEXT_PUBLIC_API_BASE is not set or points to localhost in production.");
+  console.warn("NEXT_PUBLIC_API_URL is not set or points to localhost in production.");
 }
 
 const defaultHeaders = {
