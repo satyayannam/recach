@@ -75,10 +75,8 @@ api.interceptors.request.use((config) => {
   const path = resolvePathname(config.url);
   const requiresAuth = protectedPrefixes.some((prefix) => path.startsWith(prefix));
 
-  const headers = AxiosHeaders.from(defaultHeaders);
-  if (config.headers) {
-    headers.set(config.headers);
-  }
+  const headers = AxiosHeaders.from(config.headers);
+  headers.set(defaultHeaders);
   if (token && requiresAuth) {
     headers.set("Authorization", `Bearer ${token}`);
   }
@@ -101,10 +99,8 @@ api.interceptors.response.use(
 
 adminApi.interceptors.request.use((config) => {
   const token = getAdminToken();
-  const headers = AxiosHeaders.from(defaultHeaders);
-  if (config.headers) {
-    headers.set(config.headers);
-  }
+  const headers = AxiosHeaders.from(config.headers);
+  headers.set(defaultHeaders);
   if (token) {
     headers.set("Authorization", `Bearer ${token}`);
   }
