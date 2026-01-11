@@ -247,7 +247,7 @@ export default function MePage() {
             {profile?.profile_photo_url ? (
               <img
                 src={resolvePhotoUrl(profile.profile_photo_url)}
-                alt={`${profile.full_name ?? "Profile"} photo`}
+                alt="Profile photo"
                 className="h-full w-full object-cover"
               />
             ) : (
