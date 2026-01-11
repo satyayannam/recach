@@ -16,6 +16,7 @@ export type PublicUserSearchOut = {
   achievement_total: number;
   recommendation_total: number;
   username?: string;
+  profile_photo_url?: string | null;
 };
 
 export type RecommenderMini = {
@@ -28,11 +29,26 @@ export type PublicUserOut = {
   full_name: string;
   username: string;
   recommended_by: RecommenderMini[];
+  recommender_count: number;
+  profile_photo_url?: string | null;
 };
 
 export type LeaderboardRow = {
   rank: number;
   score: number;
+  user: {
+    id: number;
+    full_name: string;
+  };
+};
+
+export type CombinedLeaderboardRow = {
+  rank: number;
+  combined_score: number;
+  achievement_score: number;
+  recommendation_score: number;
+  pA: number;
+  pR: number;
   user: {
     id: number;
     full_name: string;
@@ -55,6 +71,7 @@ export type PendingRecommendation = {
 export type UserProfile = {
   id: number;
   user_id: number;
+  profile_photo_url?: string | null;
   headline?: string | null;
   about?: string | null;
   location?: string | null;

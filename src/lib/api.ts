@@ -2,6 +2,7 @@ import axios, { AxiosHeaders } from "axios";
 import { clearAdminToken, clearToken, getAdminToken, getToken } from "./auth";
 import type {
   AdminVerification,
+  CombinedLeaderboardRow,
   EducationCreate,
   EducationOut,
   EducationScoreOut,
@@ -76,7 +77,7 @@ api.interceptors.request.use((config) => {
   const path = resolvePathname(config.url);
   const requiresAuth = protectedPrefixes.some((prefix) => path.startsWith(prefix));
 
-  const headers = AxiosHeaders.from(config.headers);
+  const headers = AxiosHeaders.from(config.headers ?? {});
   headers.set(defaultHeaders);
   if (token && requiresAuth) {
     headers.set("Authorization", `Bearer ${token}`);
@@ -100,7 +101,7 @@ api.interceptors.response.use(
 
 adminApi.interceptors.request.use((config) => {
   const token = getAdminToken();
-  const headers = AxiosHeaders.from(config.headers);
+  const headers = AxiosHeaders.from(config.headers ?? {});
   headers.set(defaultHeaders);
   if (token) {
     headers.set("Authorization", `Bearer ${token}`);
@@ -169,9 +170,20 @@ export async function getPublicProfile(username: string) {
   return data as PublicUserOut;
 }
 
-export async function getLeaderboard(type: "recommendations" | "achievements", limit = 50) {
+export async function getLeaderboard(
+  type: "recommendations" | "achievements",
+  limit?: number
+): Promise<LeaderboardRow[]>;
+export async function getLeaderboard(
+  type: "combined",
+  limit?: number
+): Promise<CombinedLeaderboardRow[]>;
+export async function getLeaderboard(
+  type: "recommendations" | "achievements" | "combined",
+  limit = 50
+) {
   const { data } = await api.get(`/leaderboard/${type}`, { params: { limit } });
-  return data as LeaderboardRow[];
+  return data;
 }
 
 export async function getPendingRecommendations() {
@@ -203,6 +215,15 @@ export async function getMyProfile() {
 
 export async function updateMyProfile(payload: Partial<UserProfile>) {
   const { data } = await api.put("/me/profile", payload);
+  return data as UserProfile;
+}
+
+export async function uploadProfilePhoto(file: File) {
+  const body = new FormData();
+  body.append("file", file);
+  const { data } = await api.put("/me/profile/photo", body, {
+    headers: { "Content-Type": "multipart/form-data" }
+  });
   return data as UserProfile;
 }
 

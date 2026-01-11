@@ -17,12 +17,19 @@ export default function ProfilePage() {
   const [profile, setProfile] = useState<PublicUserOut | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [showAllRecommenders, setShowAllRecommenders] = useState(false);
   const [recType, setRecType] = useState("academic");
   const [reason, setReason] = useState("");
   const [status, setStatus] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
   const { addToast } = useToast();
+
+  const apiBase =
+    process.env.NEXT_PUBLIC_API_URL ??
+    process.env.NEXT_PUBLIC_API_BASE ??
+    process.env.NEXT_PUBLIC_API_BASE_URL ??
+    "";
 
   const decoded = decodeURIComponent(params?.username ?? "");
   const hasToken = Boolean(getToken());
@@ -104,22 +111,61 @@ export default function ProfilePage() {
     return <p className="text-sm text-white/60">{error || "Profile not found."}</p>;
   }
 
+  const profilePhotoUrl =
+    profile.profile_photo_url && !profile.profile_photo_url.startsWith("http")
+      ? `${apiBase}${profile.profile_photo_url}`
+      : profile.profile_photo_url ?? "";
+
   return (
     <section className="space-y-6">
       <header>
-        <h1 className="text-2xl font-semibold">{profile.full_name}</h1>
-        <p className="text-white/60 text-sm">^{profile.username}</p>
+        <div className="flex items-center gap-4">
+          <div className="h-16 w-16 overflow-hidden rounded-full border border-white/10 bg-black">
+            {profilePhotoUrl ? (
+              <img
+                src={profilePhotoUrl}
+                alt={`${profile.full_name} photo`}
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <div className="h-full w-full flex items-center justify-center text-xs text-white/40">
+                No photo
+              </div>
+            )}
+          </div>
+          <div>
+            <h1 className="text-2xl font-semibold">{profile.full_name}</h1>
+            <p className="text-white/60 text-sm">^{profile.username}</p>
+          </div>
+        </div>
       </header>
 
-      <div>
+      <div className="space-y-2">
         <p className="text-sm text-white/50">Recommenders</p>
-        <p className="text-white/80 text-sm">
-          {profile.recommended_by?.length
-            ? profile.recommended_by
-                .map((rec) => `${rec.full_name} (${rec.username})`)
-                .join(", ")
-            : "None yet."}
-        </p>
+        {profile.recommended_by?.length ? (
+          <div className="text-white/80 text-sm">
+            <span>
+              Recommended by:{" "}
+              {(showAllRecommenders
+                ? profile.recommended_by
+                : profile.recommended_by.slice(0, 4)
+              )
+                .map((rec) => rec.username ? `^${rec.username}` : rec.full_name)
+                .join(", ")}
+            </span>
+            {profile.recommender_count > 4 ? (
+              <button
+                type="button"
+                className="ml-2 text-xs text-white/60 hover:text-white/80"
+                onClick={() => setShowAllRecommenders((prev) => !prev)}
+              >
+                {showAllRecommenders ? "See less" : "See full list"}
+              </button>
+            ) : null}
+          </div>
+        ) : (
+          <p className="text-white/80 text-sm">None yet.</p>
+        )}
       </div>
 
       {hasToken ? (

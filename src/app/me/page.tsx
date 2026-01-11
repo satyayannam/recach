@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Protected from "@/components/Protected";
 import {
   getMyAchievementScore,
   getMyProfile,
   getMyRecommendationScore,
-  updateMyProfile
+  updateMyProfile,
+  uploadProfilePhoto
 } from "@/lib/api";
 import type { ScoreOut, UserProfile } from "@/lib/types";
 import { useToast } from "@/components/ToastProvider";
@@ -55,7 +56,15 @@ export default function MePage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [editing, setEditing] = useState(false);
+  const [photoUploading, setPhotoUploading] = useState(false);
   const { addToast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const apiBase =
+    process.env.NEXT_PUBLIC_API_URL ??
+    process.env.NEXT_PUBLIC_API_BASE ??
+    process.env.NEXT_PUBLIC_API_BASE_URL ??
+    "";
 
   const loadData = async (silent = false) => {
     if (!silent) {
@@ -183,6 +192,46 @@ export default function MePage() {
     }
   };
 
+  const handlePhotoChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+    if (!file.type.startsWith("image/")) {
+      setError("Please upload a valid image.");
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      setError("Image must be under 2MB.");
+      return;
+    }
+
+    setPhotoUploading(true);
+    setError("");
+    try {
+      const updated = await uploadProfilePhoto(file);
+      setProfile((prev) => (prev ? { ...prev, profile_photo_url: updated.profile_photo_url } : updated));
+      addToast("Profile photo updated.");
+    } catch (err) {
+      setError("Unable to update photo.");
+    } finally {
+      setPhotoUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
+
+  const resolvePhotoUrl = (url?: string | null) => {
+    if (!url) {
+      return "";
+    }
+    if (url.startsWith("http://") || url.startsWith("https://")) {
+      return url;
+    }
+    return `${apiBase}${url}`;
+  };
+
   return (
     <Protected>
       <section className="space-y-6">
@@ -192,6 +241,39 @@ export default function MePage() {
             Manage your public profile and visibility.
           </p>
         </header>
+
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="h-20 w-20 overflow-hidden rounded-full border border-white/10 bg-black">
+            {profile?.profile_photo_url ? (
+              <img
+                src={resolvePhotoUrl(profile.profile_photo_url)}
+                alt={`${profile.full_name ?? "Profile"} photo`}
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <div className="h-full w-full flex items-center justify-center text-xs text-white/40">
+                No photo
+              </div>
+            )}
+          </div>
+          <div className="space-y-2">
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="border border-white/20 px-3 py-2 text-sm hover:text-white/80"
+              disabled={photoUploading}
+            >
+              {photoUploading ? "Uploading..." : "Update Photo"}
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handlePhotoChange}
+            />
+          </div>
+        </div>
 
         <div className="grid gap-4 md:grid-cols-3">
           <div className="border border-white/10 p-4">

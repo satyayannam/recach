@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { login } from "@/lib/api";
 import { setToken } from "@/lib/auth";
 
@@ -72,6 +73,15 @@ export default function LoginPage() {
           {loading ? "Signing in..." : "Sign in"}
         </button>
       </form>
+
+      <div className="pt-2">
+        <Link
+          href="/register"
+          className="block w-full text-center border border-white/20 px-4 py-2 text-sm hover:text-white/80"
+        >
+          Create account
+        </Link>
+      </div>
     </section>
   );
 }

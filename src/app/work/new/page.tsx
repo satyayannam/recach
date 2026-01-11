@@ -1,10 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Protected from "@/components/Protected";
 import { addWork, getMyAchievementScore, getWorkScore } from "@/lib/api";
 import type { WorkOut, WorkScoreOut } from "@/lib/types";
 import { useToast } from "@/components/ToastProvider";
+
+const COOLDOWN_SECONDS = 20;
 
 export default function AddWorkPage() {
   const [form, setForm] = useState({
@@ -24,12 +26,29 @@ export default function AddWorkPage() {
   const [created, setCreated] = useState<WorkOut | null>(null);
   const [score, setScore] = useState<WorkScoreOut | null>(null);
   const [status, setStatus] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [cooldown, setCooldown] = useState(0);
+  const [showConfirmation, setShowConfirmation] = useState(false);
   const { addToast } = useToast();
+
+  useEffect(() => {
+    if (cooldown <= 0) {
+      return;
+    }
+    const interval = setInterval(() => {
+      setCooldown((prev) => (prev > 1 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [cooldown]);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (submitting || cooldown > 0) {
+      return;
+    }
     setStatus("");
     setScore(null);
+    setSubmitting(true);
     try {
       const payload = {
         company_name: form.company_name,
@@ -57,8 +76,12 @@ export default function AddWorkPage() {
       }
       localStorage.setItem("recach-achievement-score", String(next));
       setStatus("Work entry submitted.");
+      setShowConfirmation(true);
+      setCooldown(COOLDOWN_SECONDS);
     } catch (err) {
       setStatus("Unable to add work entry.");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -199,10 +222,24 @@ export default function AddWorkPage() {
           <button
             type="submit"
             className="border border-white/20 px-4 py-2 text-sm hover:text-white/80"
+            disabled={submitting || cooldown > 0}
           >
-            Submit work
+            {submitting
+              ? "Submitting..."
+              : cooldown > 0
+              ? `Please wait ${cooldown}s`
+              : "Submit work"}
           </button>
         </form>
+
+        {showConfirmation ? (
+          <div className="border border-white/10 bg-black/40 p-4 text-sm text-white/80">
+            <p className="text-base text-white">We received your request. It has been sent.</p>
+            <p className="text-white/60 mt-1">
+              Do not send multiple educations/work items. We already received your request.
+            </p>
+          </div>
+        ) : null}
 
         {status ? <p className="text-sm text-white/60">{status}</p> : null}
 

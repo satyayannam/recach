@@ -29,9 +29,15 @@ export default function SearchPage() {
   const [reason, setReason] = useState("");
   const [actionStatus, setActionStatus] = useState<string>("");
   const [universityMap, setUniversityMap] = useState<Record<string, string>>({});
+  const [profilePhotoMap, setProfilePhotoMap] = useState<Record<string, string>>({});
   const [hasToken, setHasToken] = useState(Boolean(getToken()));
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
   const { addToast } = useToast();
+  const apiBase =
+    process.env.NEXT_PUBLIC_API_URL ??
+    process.env.NEXT_PUBLIC_API_BASE ??
+    process.env.NEXT_PUBLIC_API_BASE_URL ??
+    "";
 
   useEffect(() => {
     const handleAuth = () => setHasToken(Boolean(getToken()));
@@ -165,7 +171,7 @@ export default function SearchPage() {
     localStorage.setItem("recach-search-scores", JSON.stringify(nextCache));
   }, [results, addToast]);
 
-  const loadUniversity = async (username?: string) => {
+  const loadPublicDetails = async (username?: string) => {
     if (!username) {
       return;
     }
@@ -181,6 +187,13 @@ export default function SearchPage() {
           : null) ??
         "Unknown University";
       setUniversityMap((prev) => ({ ...prev, [username]: university }));
+      if (data.profile_photo_url) {
+        const resolved =
+          data.profile_photo_url.startsWith("http")
+            ? data.profile_photo_url
+            : `${apiBase}${data.profile_photo_url}`;
+        setProfilePhotoMap((prev) => ({ ...prev, [username]: resolved }));
+      }
     } catch (err) {
       setUniversityMap((prev) => ({ ...prev, [username]: "Unknown University" }));
     }
@@ -233,6 +246,7 @@ export default function SearchPage() {
           const university = user.username
             ? universityMap[user.username] ?? "Unknown University"
             : "Unknown University";
+          const profilePhoto = user.username ? profilePhotoMap[user.username] : "";
 
           return (
             <div
@@ -240,7 +254,7 @@ export default function SearchPage() {
               className="relative border-b border-white/10 pb-3"
               onMouseEnter={() => {
                 setHoveredId(user.user_id);
-                loadUniversity(user.username);
+                loadPublicDetails(user.username);
               }}
               onMouseLeave={() => setHoveredId((prev) => (prev === user.user_id ? null : prev))}
             >
@@ -266,6 +280,25 @@ export default function SearchPage() {
 
               {hoveredId === user.user_id ? (
                 <div className="absolute z-10 mt-3 w-full border border-white/10 bg-black p-4">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="h-10 w-10 overflow-hidden rounded-full border border-white/10 bg-black">
+                      {profilePhoto ? (
+                        <img
+                          src={profilePhoto}
+                          alt={`${user.full_name} photo`}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <div className="h-full w-full flex items-center justify-center text-[10px] text-white/40">
+                          No photo
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      <p className="text-sm text-white/80">{user.full_name}</p>
+                      <p className="text-xs text-white/50">{username}</p>
+                    </div>
+                  </div>
                   <p className="text-xs text-white/50 mb-2">Public details</p>
                   {user.headline ? (
                     <p className="text-sm text-white/80">{user.headline}</p>
