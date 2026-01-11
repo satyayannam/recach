@@ -171,17 +171,9 @@ export async function getPublicProfile(username: string) {
 }
 
 export async function getLeaderboard(
-  type: "recommendations" | "achievements",
-  limit?: number
-): Promise<LeaderboardRow[]>;
-export async function getLeaderboard(
-  type: "combined",
-  limit?: number
-): Promise<CombinedLeaderboardRow[]>;
-export async function getLeaderboard(
   type: "recommendations" | "achievements" | "combined",
   limit = 50
-) {
+): Promise<LeaderboardRow[] | CombinedLeaderboardRow[]> {
   const { data } = await api.get(`/leaderboard/${type}`, { params: { limit } });
   return data;
 }
