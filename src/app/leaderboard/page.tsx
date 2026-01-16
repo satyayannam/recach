@@ -107,8 +107,7 @@ export default function LeaderboardPage() {
         {type === "combined" && entries.length > 0 ? (
           <div className="flex items-center justify-between text-xs text-white/50 py-3">
             <span>Rank</span>
-            <span>Ranking</span>
-            <span>Recommendation</span>
+            <span className="ml-auto">Ranking</span>
           </div>
         ) : null}
         {(entries ?? []).map((entry, index) => {
@@ -125,16 +124,11 @@ export default function LeaderboardPage() {
                   </div>
                 </div>
                 {type === "combined" ? (
-                  <div className="flex items-center gap-6 text-xs">
-                    <span className="text-white/80">
-                      {Number.isFinite((entry as CombinedLeaderboardRow).combined_score)
-                        ? (entry as CombinedLeaderboardRow).combined_score.toFixed(3)
-                        : "-"}
-                    </span>
-                    <span className="text-purple-400">
-                      {(entry as CombinedLeaderboardRow).recommendation_score ?? "-"}
-                    </span>
-                  </div>
+                  <span className="text-white/80 text-xs ml-auto">
+                    {Number.isFinite((entry as CombinedLeaderboardRow).combined_score)
+                      ? `${Math.round((entry as CombinedLeaderboardRow).combined_score * 100)}%`
+                      : "-"}
+                  </span>
                 ) : (
                   <span className={scoreClass}>{(entry as LeaderboardRow).score}</span>
                 )}
