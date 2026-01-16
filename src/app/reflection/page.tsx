@@ -19,6 +19,7 @@ const POST_TYPES: Array<{ id: PostType; label: string }> = [
 
 const ROTATE_MS = 60000;
 const STORY_TTL_MS = 24 * 60 * 60 * 1000;
+const REFRESH_MS = 30000;
 
 const getPreview = (content: string) => {
   const trimmed = content.trim();
@@ -41,6 +42,7 @@ export default function ReflectionPage() {
   } | null>(null);
   const [rotatingIndex, setRotatingIndex] = useState(0);
   const [caretSelections, setCaretSelections] = useState<Record<number, boolean>>({});
+  const [now, setNow] = useState(Date.now());
   const cardRefs = useRef<Record<number, HTMLDivElement | null>>({});
   const carouselRef = useRef<HTMLDivElement | null>(null);
 
@@ -74,6 +76,10 @@ export default function ReflectionPage() {
 
   useEffect(() => {
     loadReflections();
+    const interval = setInterval(() => {
+      loadReflections();
+    }, REFRESH_MS);
+    return () => clearInterval(interval);
   }, [loadReflections]);
 
   useEffect(() => {
@@ -94,12 +100,8 @@ export default function ReflectionPage() {
     const recent = reflections.filter(
       (reflection) => Date.parse(reflection.created_at) >= cutoff
     );
-    if (!currentUser) {
-      return recent;
-    }
-    const others = recent.filter((reflection) => reflection.user.id !== currentUser.id);
-    return others.length > 0 ? others : recent;
-  }, [currentUser, reflections]);
+    return recent;
+  }, [reflections]);
 
   useEffect(() => {
     if (otherPeople.length === 0) {
@@ -129,6 +131,13 @@ export default function ReflectionPage() {
       target.scrollIntoView({ behavior: "smooth", inline: "start", block: "nearest" });
     }
   }, [rotatingIndex]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setNow(Date.now());
+    }, 60000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleToggleCaret = async (postId: number) => {
     if (!currentUser) {
@@ -174,6 +183,27 @@ export default function ReflectionPage() {
     } catch {
       addToast("Unable to post right now.", "text-purple-300");
     }
+  };
+
+  const formatTimeLeft = (createdAt: string) => {
+    const normalized = /z$/i.test(createdAt) || /[+-]\d{2}:\d{2}$/.test(createdAt)
+      ? createdAt
+      : `${createdAt}Z`;
+    const created = Date.parse(normalized);
+    if (Number.isNaN(created)) {
+      return "";
+    }
+    const remainingMs = Math.max(0, created + STORY_TTL_MS - now);
+    const totalMinutes = Math.ceil(remainingMs / 60000);
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    if (hours <= 0) {
+      return `${minutes}m left`;
+    }
+    if (minutes === 0) {
+      return `${hours}h left`;
+    }
+    return `${hours}h ${minutes}m left`;
   };
 
   return (
@@ -225,6 +255,9 @@ export default function ReflectionPage() {
                 </div>
                 <div className="text-[11px] text-purple-300">Reflection</div>
                 <p className="text-sm text-white/80">{getPreview(reflection.content)}</p>
+                <div className="text-[11px] text-white/40">
+                  {formatTimeLeft(reflection.created_at)}
+                </div>
               </div>
             ))}
           </div>
@@ -256,6 +289,7 @@ export default function ReflectionPage() {
       <div className="space-y-5">
         {posts.map((post) => {
           const label = POST_TYPES.find((tab) => tab.id === post.type)?.label ?? post.type;
+          const caretDisabled = currentUser ? post.user.id === currentUser.id : false;
           return (
             <div key={post.id} ref={(el) => (cardRefs.current[post.id] = el)}>
               <ReflectionCard
@@ -263,6 +297,7 @@ export default function ReflectionPage() {
                 label={label}
                 onToggleCaret={handleToggleCaret}
                 caretActive={Boolean(caretSelections[post.id])}
+                caretDisabled={caretDisabled}
               />
             </div>
           );

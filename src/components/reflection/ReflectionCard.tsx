@@ -7,6 +7,7 @@ type ReflectionCardProps = {
   label: string;
   onToggleCaret: (reflectionId: number) => void;
   caretActive: boolean;
+  caretDisabled?: boolean;
 };
 
 const formatDate = (value: string) => {
@@ -21,7 +22,8 @@ export default function ReflectionCard({
   reflection,
   label,
   onToggleCaret,
-  caretActive
+  caretActive,
+  caretDisabled
 }: ReflectionCardProps) {
   return (
     <article className="border border-white/20 rounded-3xl bg-black px-6 py-5 space-y-4">
@@ -38,11 +40,12 @@ export default function ReflectionCard({
         <span>{formatDate(reflection.created_at)}</span>
         <button
           onClick={() => onToggleCaret(reflection.id)}
-          className={`border px-4 py-2 rounded-full text-base transition-transform duration-200 hover:scale-105 ${
+          disabled={caretDisabled}
+          className={`border px-4 py-2 rounded-full text-base transition-transform duration-200 ${
             caretActive
               ? "border-green-400/70 text-green-300"
               : "border-white/30 text-white/70"
-          }`}
+          } ${caretDisabled ? "opacity-50 cursor-not-allowed" : "hover:scale-105"}`}
         >
           ^{reflection.caret_count}
         </button>
