@@ -2,6 +2,7 @@ import axios, { AxiosHeaders } from "axios";
 import { clearAdminToken, clearToken, getAdminToken, getToken } from "./auth";
 import type {
   AdminVerification,
+  CaretScoreOut,
   CombinedLeaderboardRow,
   EducationCreate,
   EducationOut,
@@ -22,14 +23,17 @@ import type {
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "";
 const apiBase = process.env.NEXT_PUBLIC_API_BASE ?? "";
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
-const candidateBase = apiUrl || apiBase || apiBaseUrl;
-const isLocalBase = /localhost|127\.0\.0\.1/.test(candidateBase);
+const devBase = apiBase || apiBaseUrl;
+const prodBase = apiUrl || apiBase || apiBaseUrl;
+const isLocalBase = /localhost|127\.0\.0\.1/.test(prodBase);
 const resolvedApiBase =
-  process.env.NODE_ENV === "production" && isLocalBase
-    ? apiBaseUrl && !/localhost|127\.0\.0\.1/.test(apiBaseUrl)
-      ? apiBaseUrl
-      : ""
-    : candidateBase;
+  process.env.NODE_ENV === "production"
+    ? isLocalBase
+      ? apiBaseUrl && !/localhost|127\.0\.0\.1/.test(apiBaseUrl)
+        ? apiBaseUrl
+        : ""
+      : prodBase
+    : devBase || prodBase;
 
 if (process.env.NODE_ENV === "production" && !resolvedApiBase) {
   console.warn("NEXT_PUBLIC_API_URL is not set or points to localhost in production.");
@@ -227,6 +231,11 @@ export async function getMyAchievementScore() {
 export async function getMyRecommendationScore() {
   const { data } = await api.get("/users/me/recommendation-score");
   return data as ScoreOut;
+}
+
+export async function getMyReflectionCaretScore() {
+  const { data } = await api.get("/users/me/reflection-caret-score");
+  return data as CaretScoreOut;
 }
 
 export async function addWork(payload: WorkCreate) {

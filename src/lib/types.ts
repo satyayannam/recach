@@ -71,6 +71,7 @@ export type PendingRecommendation = {
 export type UserProfile = {
   id: number;
   user_id: number;
+  username?: string;
   profile_photo_url?: string | null;
   headline?: string | null;
   about?: string | null;
@@ -104,6 +105,11 @@ export type ScoreOut = {
   user_id: number;
   achievement_score?: number;
   recommendation_score?: number;
+};
+
+export type CaretScoreOut = {
+  user_id: number;
+  caret_score: number;
 };
 
 export type WorkCreate = {
@@ -208,4 +214,44 @@ export type AdminVerification = {
   decided_at?: string | null;
   decided_by_user_id?: number | null;
   admin_notes?: string | null;
+};
+
+export type ReflectionType =
+  | "story";
+
+export type ReflectionUser = {
+  id: number;
+  username: string;
+  full_name: string;
+  university?: string | null;
+};
+
+export type ReflectionOut = {
+  id: number;
+  type: ReflectionType;
+  content: string;
+  created_at: string;
+  user: ReflectionUser;
+};
+
+export type PostType =
+  | "behind_resume"
+  | "this_lately"
+  | "recent_realization"
+  | "currently_building";
+
+export type PostUser = {
+  id: number;
+  username: string;
+  full_name: string;
+  university?: string | null;
+};
+
+export type PostOut = {
+  id: number;
+  type: PostType;
+  content: string;
+  created_at: string;
+  user: PostUser;
+  caret_count: number;
 };

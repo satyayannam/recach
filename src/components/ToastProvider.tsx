@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
+import Toast from "@/components/Toast";
 
 type Toast = {
   id: string;
@@ -30,7 +31,7 @@ export default function ToastProvider({ children }: { children: React.ReactNode 
     setToasts((prev) => [...prev, { id, message, accentClass }]);
     setTimeout(() => {
       setToasts((prev) => prev.filter((toast) => toast.id !== id));
-    }, 2500);
+    }, 1500);
   }, []);
 
   const value = useMemo(() => ({ addToast }), [addToast]);
@@ -40,12 +41,7 @@ export default function ToastProvider({ children }: { children: React.ReactNode 
       {children}
       <div className="fixed right-6 top-6 z-50 space-y-2">
         {toasts.map((toast) => (
-          <div
-            key={toast.id}
-            className="border border-white/10 bg-black px-4 py-2 text-sm shadow"
-          >
-            <span className={toast.accentClass ?? "text-white/80"}>{toast.message}</span>
-          </div>
+          <Toast key={toast.id} message={toast.message} accentClass={toast.accentClass} />
         ))}
       </div>
     </ToastContext.Provider>

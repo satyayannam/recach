@@ -32,7 +32,7 @@ export default function Sidebar() {
   const navItems: NavItem[] = useMemo(() => {
     if (!authed) {
       return [
-        { href: "/", label: "Feed" },
+        { href: "/reflection", label: "Circle" },
         { href: "/search", label: "Search" },
         { href: "/leaderboard", label: "Leaderboard" },
         { href: "/login", label: "Login" },
@@ -43,7 +43,7 @@ export default function Sidebar() {
     }
 
     const items = [
-      { href: "/", label: "Feed" },
+      { href: "/reflection", label: "Circle" },
       { href: "/me", label: "My Profile" },
       { href: "/search", label: "Search" },
       { href: "/leaderboard", label: "Leaderboard" },

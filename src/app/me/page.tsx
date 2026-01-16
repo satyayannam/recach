@@ -6,9 +6,11 @@ import {
   getMyAchievementScore,
   getMyProfile,
   getMyRecommendationScore,
+  getMyReflectionCaretScore,
   updateMyProfile,
   uploadProfilePhoto
 } from "@/lib/api";
+import { listPosts } from "@/lib/posts";
 import type { ScoreOut, UserProfile } from "@/lib/types";
 import { useToast } from "@/components/ToastProvider";
 
@@ -51,12 +53,14 @@ export default function MePage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [achievement, setAchievement] = useState<ScoreOut | null>(null);
   const [recommendation, setRecommendation] = useState<ScoreOut | null>(null);
+  const [caretScore, setCaretScore] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [editing, setEditing] = useState(false);
   const [photoUploading, setPhotoUploading] = useState(false);
+  const [posts, setPosts] = useState<string[]>([]);
   const { addToast } = useToast();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -72,11 +76,13 @@ export default function MePage() {
     }
     setError("");
     try {
-      const [profileResult, achievementResult, recommendationResult] =
+      const [profileResult, achievementResult, recommendationResult, postResult, caretResult] =
         await Promise.allSettled([
           getMyProfile(),
           getMyAchievementScore(),
-          getMyRecommendationScore()
+          getMyRecommendationScore(),
+          listPosts(200),
+          getMyReflectionCaretScore()
         ]);
 
       if (profileResult.status === "fulfilled") {
@@ -124,6 +130,17 @@ export default function MePage() {
           addToast(`+${next - prev} Recommendation points added`, "text-purple-400");
         }
         localStorage.setItem("recach-recommendation-score", String(next));
+      }
+      if (caretResult.status === "fulfilled") {
+        setCaretScore(caretResult.value.caret_score ?? 0);
+      }
+      if (postResult.status === "fulfilled") {
+        const items = postResult.value;
+        const myId = profileResult.status === "fulfilled" ? profileResult.value.user_id : null;
+        const mine = myId
+          ? items.filter((item) => item.user.id === myId).map((item) => item.content)
+          : [];
+        setPosts(mine);
       }
     } catch (err: any) {
       if (!silent) {
@@ -289,8 +306,8 @@ export default function MePage() {
             </p>
           </div>
           <div className="border border-white/10 p-4">
-            <p className="text-xs text-white/50">Profile status</p>
-            <p className="text-lg">{profile ? "Active" : "Not created"}</p>
+            <p className="text-xs text-white/50">Caret score</p>
+            <p className="text-lg text-purple-300">^{caretScore ?? "-"}</p>
           </div>
         </div>
 
@@ -499,6 +516,21 @@ export default function MePage() {
             </button>
           </form>
         )}
+
+        <div className="space-y-3 max-w-2xl">
+          <h2 className="text-lg font-semibold">My posts</h2>
+          {posts.length === 0 ? (
+            <p className="text-sm text-white/60">No posts yet.</p>
+          ) : (
+            <div className="space-y-3">
+              {posts.map((item, index) => (
+                <div key={`${index}-${item.slice(0, 12)}`} className="border border-white/10 p-3">
+                  <p className="text-sm text-white/80">{item}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </section>
     </Protected>
   );
