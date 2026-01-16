@@ -15,8 +15,15 @@ type ReflectionCardProps = {
   onEdit?: (postId: number, content: string) => void;
 };
 
+const normalizeTimestamp = (value: string) => {
+  if (/z$/i.test(value) || /[+-]\d{2}:\d{2}$/.test(value)) {
+    return value;
+  }
+  return `${value}Z`;
+};
+
 const formatDate = (value: string) => {
-  const date = new Date(value);
+  const date = new Date(normalizeTimestamp(value));
   if (Number.isNaN(date.getTime())) {
     return "";
   }
