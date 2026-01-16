@@ -6,7 +6,7 @@ import ReflectionCard from "@/components/reflection/ReflectionCard";
 import { useToast } from "@/components/ToastProvider";
 import { getToken } from "@/lib/auth";
 import { createReflection, listReflections } from "@/lib/reflections";
-import { createPost, listPosts, togglePostCaret } from "@/lib/posts";
+import { createPost, deletePost, listPosts, togglePostCaret } from "@/lib/posts";
 import { getMyProfile } from "@/lib/api";
 import type { PostOut, PostType, ReflectionOut } from "@/lib/types";
 
@@ -42,7 +42,6 @@ export default function ReflectionPage() {
   } | null>(null);
   const [rotatingIndex, setRotatingIndex] = useState(0);
   const [caretSelections, setCaretSelections] = useState<Record<number, boolean>>({});
-  const [now, setNow] = useState(Date.now());
   const cardRefs = useRef<Record<number, HTMLDivElement | null>>({});
   const carouselRef = useRef<HTMLDivElement | null>(null);
 
@@ -95,29 +94,28 @@ export default function ReflectionPage() {
     };
   }, [resolveAuth]);
 
-  const otherPeople = useMemo(() => {
+  const reflectionsInWindow = useMemo(() => {
     const cutoff = Date.now() - STORY_TTL_MS;
-    const recent = reflections.filter(
+    return reflections.filter(
       (reflection) => Date.parse(reflection.created_at) >= cutoff
     );
-    return recent;
   }, [reflections]);
 
   useEffect(() => {
-    if (otherPeople.length === 0) {
+    if (reflectionsInWindow.length === 0) {
       return;
     }
     const timer = setInterval(() => {
-      setRotatingIndex((prev) => (prev + 1) % otherPeople.length);
+      setRotatingIndex((prev) => (prev + 1) % reflectionsInWindow.length);
     }, ROTATE_MS);
     return () => clearInterval(timer);
-  }, [otherPeople.length]);
+  }, [reflectionsInWindow.length]);
 
   useEffect(() => {
-    if (rotatingIndex >= otherPeople.length) {
+    if (rotatingIndex >= reflectionsInWindow.length) {
       setRotatingIndex(0);
     }
-  }, [otherPeople.length, rotatingIndex]);
+  }, [reflectionsInWindow.length, rotatingIndex]);
 
   useEffect(() => {
     if (!carouselRef.current) {
@@ -131,13 +129,6 @@ export default function ReflectionPage() {
       target.scrollIntoView({ behavior: "smooth", inline: "start", block: "nearest" });
     }
   }, [rotatingIndex]);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setNow(Date.now());
-    }, 60000);
-    return () => clearInterval(interval);
-  }, []);
 
   const handleToggleCaret = async (postId: number) => {
     if (!currentUser) {
@@ -154,6 +145,16 @@ export default function ReflectionPage() {
       setCaretSelections((prev) => ({ ...prev, [postId]: result.has_caret }));
     } catch {
       addToast("Unable to update caret.", "text-purple-300");
+    }
+  };
+
+  const handleDelete = async (postId: number) => {
+    try {
+      await deletePost(postId);
+      setPosts((prev) => prev.filter((item) => item.id !== postId));
+      addToast("Post deleted", "text-purple-300");
+    } catch {
+      addToast("Unable to delete post.", "text-purple-300");
     }
   };
 
@@ -185,27 +186,6 @@ export default function ReflectionPage() {
     }
   };
 
-  const formatTimeLeft = (createdAt: string) => {
-    const normalized = /z$/i.test(createdAt) || /[+-]\d{2}:\d{2}$/.test(createdAt)
-      ? createdAt
-      : `${createdAt}Z`;
-    const created = Date.parse(normalized);
-    if (Number.isNaN(created)) {
-      return "";
-    }
-    const remainingMs = Math.max(0, created + STORY_TTL_MS - now);
-    const totalMinutes = Math.ceil(remainingMs / 60000);
-    const hours = Math.floor(totalMinutes / 60);
-    const minutes = totalMinutes % 60;
-    if (hours <= 0) {
-      return `${minutes}m left`;
-    }
-    if (minutes === 0) {
-      return `${hours}h left`;
-    }
-    return `${hours}h ${minutes}m left`;
-  };
-
   return (
     <section className="space-y-6">
       <div className="space-y-4 border border-white/10 rounded-2xl px-5 py-4">
@@ -218,7 +198,9 @@ export default function ReflectionPage() {
               className="border border-white/20 px-2 text-white/70"
               onClick={() =>
                 setRotatingIndex((prev) =>
-                  otherPeople.length ? (prev - 1 + otherPeople.length) % otherPeople.length : 0
+                  reflectionsInWindow.length
+                    ? (prev - 1 + reflectionsInWindow.length) % reflectionsInWindow.length
+                    : 0
                 )
               }
             >
@@ -228,7 +210,9 @@ export default function ReflectionPage() {
               className="border border-white/20 px-2 text-white/70"
               onClick={() =>
                 setRotatingIndex((prev) =>
-                  otherPeople.length ? (prev + 1) % otherPeople.length : 0
+                  reflectionsInWindow.length
+                    ? (prev + 1) % reflectionsInWindow.length
+                    : 0
                 )
               }
             >
@@ -236,12 +220,12 @@ export default function ReflectionPage() {
             </button>
           </div>
         </div>
-        {otherPeople.length > 0 ? (
+        {reflectionsInWindow.length > 0 ? (
           <div
             ref={carouselRef}
             className="flex gap-3 overflow-x-auto snap-x snap-mandatory pb-2"
           >
-            {otherPeople.map((reflection, index) => (
+            {reflectionsInWindow.map((reflection, index) => (
               <div
                 key={reflection.id}
                 data-carousel-index={index}
@@ -255,9 +239,6 @@ export default function ReflectionPage() {
                 </div>
                 <div className="text-[11px] text-purple-300">Reflection</div>
                 <p className="text-sm text-white/80">{getPreview(reflection.content)}</p>
-                <div className="text-[11px] text-white/40">
-                  {formatTimeLeft(reflection.created_at)}
-                </div>
               </div>
             ))}
           </div>
@@ -289,7 +270,7 @@ export default function ReflectionPage() {
       <div className="space-y-5">
         {posts.map((post) => {
           const label = POST_TYPES.find((tab) => tab.id === post.type)?.label ?? post.type;
-          const caretDisabled = currentUser ? post.user.id === currentUser.id : false;
+          const isOwner = currentUser ? post.user.id === currentUser.id : false;
           return (
             <div key={post.id} ref={(el) => (cardRefs.current[post.id] = el)}>
               <ReflectionCard
@@ -297,7 +278,9 @@ export default function ReflectionPage() {
                 label={label}
                 onToggleCaret={handleToggleCaret}
                 caretActive={Boolean(caretSelections[post.id])}
-                caretDisabled={caretDisabled}
+                caretDisabled={isOwner}
+                canDelete={isOwner}
+                onDelete={handleDelete}
               />
             </div>
           );

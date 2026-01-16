@@ -27,3 +27,10 @@ export async function togglePostCaret(postId: number) {
   const { data } = await api.post(`/posts/${postId}/caret`, null, { headers });
   return data as { post_id: number; caret_count: number; has_caret: boolean };
 }
+
+export async function deletePost(postId: number) {
+  const token = getToken();
+  const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
+  const { data } = await api.delete(`/posts/${postId}`, { headers });
+  return data as { status: string };
+}
