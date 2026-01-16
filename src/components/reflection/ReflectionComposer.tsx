@@ -43,27 +43,27 @@ export default function ReflectionComposer({
   }, [open]);
 
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
       <div className="h-10 w-10 rounded-full border border-white/40 text-white/70 text-xs flex items-center justify-center">
         +
       </div>
-      <div className="flex-1 rounded-full border border-white/30 bg-white/5 px-4 py-2">
-        <div className="flex flex-wrap items-center gap-3">
+      <div className="w-full flex-1 rounded-full border border-white/30 bg-white/5 px-4 py-2">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <textarea
             value={value}
             onChange={(event) => onChange(event.target.value)}
             placeholder="Post something new..."
             disabled={disabled}
             rows={2}
-            className="flex-1 min-w-[200px] bg-transparent text-sm text-white placeholder:text-white/40 resize-none outline-none disabled:opacity-50"
+            className="flex-1 min-w-[140px] bg-transparent text-sm text-white placeholder:text-white/40 resize-none outline-none disabled:opacity-50"
           />
-          <div className="relative" ref={wrapperRef}>
+          <div className="relative w-full sm:w-auto" ref={wrapperRef}>
             <button
               type="button"
               disabled={disabled}
               onClick={() => setOpen((prev) => !prev)}
               onMouseEnter={() => setOpen(true)}
-              className={`bg-black border border-white/20 text-xs px-3 py-1 rounded-full disabled:opacity-50 ${
+              className={`w-full sm:w-auto bg-black border border-white/20 text-xs px-3 py-2 rounded-full disabled:opacity-50 ${
                 activeOption?.accent ? "text-purple-300" : "text-white"
               }`}
             >
@@ -71,7 +71,7 @@ export default function ReflectionComposer({
             </button>
             {open ? (
               <div
-                className="absolute right-0 mt-2 w-56 rounded-xl border border-white/10 bg-black shadow-lg z-10"
+                className="absolute left-0 sm:right-0 sm:left-auto mt-2 w-full sm:w-56 rounded-xl border border-white/10 bg-black shadow-lg z-10"
                 onMouseEnter={() => setOpen(true)}
                 onMouseLeave={() => setOpen(false)}
               >

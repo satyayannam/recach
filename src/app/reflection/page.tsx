@@ -209,13 +209,13 @@ export default function ReflectionPage() {
         {otherPeople.length > 0 ? (
           <div
             ref={carouselRef}
-            className="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-2"
+            className="flex gap-3 overflow-x-auto snap-x snap-mandatory pb-2"
           >
             {otherPeople.map((reflection, index) => (
               <div
                 key={reflection.id}
                 data-carousel-index={index}
-                className="min-w-[260px] max-w-[320px] shrink-0 snap-start text-left border border-white/10 rounded-2xl px-4 py-3 space-y-2 transition-transform duration-200 hover:scale-105"
+                className="min-w-[220px] max-w-[280px] sm:min-w-[260px] sm:max-w-[320px] shrink-0 snap-start text-left border border-white/10 rounded-2xl px-4 py-3 space-y-2 transition-transform duration-200 hover:scale-105"
               >
                 <div className="text-sm text-white">
                   @{reflection.user.username}
