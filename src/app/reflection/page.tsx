@@ -6,7 +6,7 @@ import ReflectionCard from "@/components/reflection/ReflectionCard";
 import { useToast } from "@/components/ToastProvider";
 import { getToken } from "@/lib/auth";
 import { createReflection, listReflections } from "@/lib/reflections";
-import { createPost, deletePost, listPosts, togglePostCaret } from "@/lib/posts";
+import { createPost, deletePost, listPosts, togglePostCaret, updatePost } from "@/lib/posts";
 import { getMyProfile } from "@/lib/api";
 import type { PostOut, PostType, ReflectionOut } from "@/lib/types";
 
@@ -29,6 +29,13 @@ const getPreview = (content: string) => {
   return `${trimmed.slice(0, 160)}...`;
 };
 
+const normalizeTimestamp = (value: string) => {
+  if (/z$/i.test(value) || /[+-]\d{2}:\d{2}$/.test(value)) {
+    return value;
+  }
+  return `${value}Z`;
+};
+
 export default function ReflectionPage() {
   const { addToast } = useToast();
   const [reflections, setReflections] = useState<ReflectionOut[]>([]);
@@ -42,6 +49,7 @@ export default function ReflectionPage() {
   } | null>(null);
   const [rotatingIndex, setRotatingIndex] = useState(0);
   const [caretSelections, setCaretSelections] = useState<Record<number, boolean>>({});
+  const [now, setNow] = useState(Date.now());
   const cardRefs = useRef<Record<number, HTMLDivElement | null>>({});
   const carouselRef = useRef<HTMLDivElement | null>(null);
 
@@ -97,7 +105,7 @@ export default function ReflectionPage() {
   const reflectionsInWindow = useMemo(() => {
     const cutoff = Date.now() - STORY_TTL_MS;
     return reflections.filter(
-      (reflection) => Date.parse(reflection.created_at) >= cutoff
+      (reflection) => Date.parse(normalizeTimestamp(reflection.created_at)) >= cutoff
     );
   }, [reflections]);
 
@@ -130,6 +138,13 @@ export default function ReflectionPage() {
     }
   }, [rotatingIndex]);
 
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setNow(Date.now());
+    }, 60000);
+    return () => clearInterval(interval);
+  }, []);
+
   const handleToggleCaret = async (postId: number) => {
     if (!currentUser) {
       addToast("Login to add a caret.", "text-purple-300");
@@ -156,6 +171,38 @@ export default function ReflectionPage() {
     } catch {
       addToast("Unable to delete post.", "text-purple-300");
     }
+  };
+
+  const handleEdit = async (postId: number, content: string) => {
+    try {
+      const post = posts.find((item) => item.id === postId);
+      if (!post) {
+        return;
+      }
+      const updated = await updatePost(postId, { type: post.type, content });
+      setPosts((prev) => prev.map((item) => (item.id === postId ? updated : item)));
+      addToast("Post updated", "text-purple-300");
+    } catch {
+      addToast("Unable to update post.", "text-purple-300");
+    }
+  };
+
+  const formatTimeLeft = (createdAt: string) => {
+    const created = Date.parse(normalizeTimestamp(createdAt));
+    if (Number.isNaN(created)) {
+      return "";
+    }
+    const remainingMs = Math.max(0, created + STORY_TTL_MS - now);
+    const totalMinutes = Math.ceil(remainingMs / 60000);
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    if (hours <= 0) {
+      return `${minutes}m left`;
+    }
+    if (minutes === 0) {
+      return `${hours}h left`;
+    }
+    return `${hours}h ${minutes}m left`;
   };
 
   const handleSubmit = async () => {
@@ -239,6 +286,9 @@ export default function ReflectionPage() {
                 </div>
                 <div className="text-[11px] text-purple-300">Reflection</div>
                 <p className="text-sm text-white/80">{getPreview(reflection.content)}</p>
+                <div className="text-[11px] text-white/40">
+                  {formatTimeLeft(reflection.created_at)}
+                </div>
               </div>
             ))}
           </div>
@@ -281,6 +331,8 @@ export default function ReflectionPage() {
                 caretDisabled={isOwner}
                 canDelete={isOwner}
                 onDelete={handleDelete}
+                canEdit={isOwner}
+                onEdit={handleEdit}
               />
             </div>
           );

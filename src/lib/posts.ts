@@ -34,3 +34,10 @@ export async function deletePost(postId: number) {
   const { data } = await api.delete(`/posts/${postId}`, { headers });
   return data as { status: string };
 }
+
+export async function updatePost(postId: number, payload: PostCreatePayload) {
+  const token = getToken();
+  const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
+  const { data } = await api.put(`/posts/${postId}`, payload, { headers });
+  return data as PostOut;
+}
