@@ -14,6 +14,11 @@ export async function listPosts(limit = 50) {
   return data as PostOut[];
 }
 
+export async function listPostsByUser(userId: number, limit = 50) {
+  const { data } = await api.get("/posts", { params: { limit, user_id: userId } });
+  return data as PostOut[];
+}
+
 export async function createPost(payload: PostCreatePayload) {
   const token = getToken();
   const headers = token ? { Authorization: `Bearer ${token}` } : undefined;

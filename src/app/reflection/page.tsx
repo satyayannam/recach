@@ -62,6 +62,15 @@ export default function ReflectionPage() {
       ]);
       setReflections(reflectionData);
       setPosts(postData);
+      setCaretSelections((prev) => {
+        const next = { ...prev };
+        postData.forEach((post) => {
+          if (post.has_caret) {
+            next[post.id] = true;
+          }
+        });
+        return next;
+      });
     } finally {
       setLoading(false);
     }
@@ -182,8 +191,9 @@ export default function ReflectionPage() {
       const updated = await updatePost(postId, { type: post.type, content });
       setPosts((prev) => prev.map((item) => (item.id === postId ? updated : item)));
       addToast("Post updated", "text-purple-300");
-    } catch {
-      addToast("Unable to update post.", "text-purple-300");
+    } catch (err: any) {
+      const detail = err?.response?.data?.detail;
+      addToast(typeof detail === "string" ? detail : "Unable to update post.", "text-purple-300");
     }
   };
 
@@ -279,7 +289,12 @@ export default function ReflectionPage() {
                 className="min-w-[220px] max-w-[280px] sm:min-w-[260px] sm:max-w-[320px] shrink-0 snap-start text-left border border-white/10 rounded-2xl px-4 py-3 space-y-2 transition-transform duration-200 hover:scale-105"
               >
                 <div className="text-sm text-white">
-                  @{reflection.user.username}
+                  <a
+                    href={`/u/${encodeURIComponent(reflection.user.username)}`}
+                    className="hover:text-white/80"
+                  >
+                    @{reflection.user.username}
+                  </a>
                   {reflection.user.university ? (
                     <span className="text-white/50"> · {reflection.user.university}</span>
                   ) : null}

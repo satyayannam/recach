@@ -290,6 +290,13 @@ export default function MePage() {
               onChange={handlePhotoChange}
             />
           </div>
+          <div className="space-y-1 min-w-[220px]">
+            <p className="text-sm text-white/80">{profile?.full_name ?? "Name unavailable"}</p>
+            <p className="text-xs text-white/60">
+              {profile?.username ? `^${profile.username}` : "Username unavailable"}
+            </p>
+            <p className="text-xs text-white/50">{profile?.email ?? "Email unavailable"}</p>
+          </div>
         </div>
 
         <div className="grid gap-4 md:grid-cols-3">
@@ -326,66 +333,9 @@ export default function MePage() {
         </div>
 
         {!editing ? (
-          <div className="space-y-4 max-w-2xl">
-            <div>
-              <p className="text-xs text-white/50">Headline</p>
-              <p className="text-sm text-white/80">{profile?.headline ?? "—"}</p>
-            </div>
-            <div>
-              <p className="text-xs text-white/50">About</p>
-              <p className="text-sm text-white/80">{profile?.about ?? "—"}</p>
-            </div>
-            <div className="grid gap-4 md:grid-cols-2">
-              <div>
-                <p className="text-xs text-white/50">Location</p>
-                <p className="text-sm text-white/80">{profile?.location ?? "—"}</p>
-              </div>
-              <div>
-                <p className="text-xs text-white/50">Pronouns</p>
-                <p className="text-sm text-white/80">{profile?.pronouns ?? "—"}</p>
-              </div>
-            </div>
-            <div className="grid gap-4 md:grid-cols-2">
-              <div>
-                <p className="text-xs text-white/50">Website</p>
-                <p className="text-sm text-white/80">{profile?.website_url ?? "—"}</p>
-              </div>
-              <div>
-                <p className="text-xs text-white/50">GitHub</p>
-                <p className="text-sm text-white/80">{profile?.github_url ?? "—"}</p>
-              </div>
-            </div>
-            <div className="grid gap-4 md:grid-cols-2">
-              <div>
-                <p className="text-xs text-white/50">LinkedIn</p>
-                <p className="text-sm text-white/80">{profile?.linkedin_url ?? "—"}</p>
-              </div>
-              <div>
-                <p className="text-xs text-white/50">Portfolio</p>
-                <p className="text-sm text-white/80">{profile?.portfolio_url ?? "—"}</p>
-              </div>
-            </div>
-            <div>
-              <p className="text-xs text-white/50">Twitter</p>
-              <p className="text-sm text-white/80">{profile?.twitter_url ?? "—"}</p>
-            </div>
-            <div className="grid gap-4 md:grid-cols-2">
-              <div>
-                <p className="text-xs text-white/50">Visibility</p>
-                <p className="text-sm text-white/80">{profile?.visibility ?? "—"}</p>
-              </div>
-              <div>
-                <p className="text-xs text-white/50">Open to recommendations</p>
-                <p className="text-sm text-white/80">
-                  {profile?.is_open_to_recommendations ? "Yes" : "No"}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs text-white/50">Hiring</p>
-                <p className="text-sm text-white/80">{profile?.is_hiring ? "Yes" : "No"}</p>
-              </div>
-            </div>
-          </div>
+          <p className="text-sm text-white/60">
+            Click Edit to view or update your profile details.
+          </p>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4 max-w-2xl">
             <div className="space-y-2">
@@ -535,3 +485,4 @@ export default function MePage() {
     </Protected>
   );
 }
+

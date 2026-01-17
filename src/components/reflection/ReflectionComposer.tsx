@@ -44,10 +44,10 @@ export default function ReflectionComposer({
 
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-      <div className="h-10 w-10 rounded-full border border-white/40 text-white/70 text-xs flex items-center justify-center">
+      <div className="h-10 w-10 rounded-full border border-white/40 text-white/70 text-xs flex items-center justify-center transition-transform duration-200 hover:scale-105">
         +
       </div>
-      <div className="w-full flex-1 rounded-full border border-white/30 bg-white/5 px-4 py-2">
+      <div className="w-full flex-1 rounded-full border border-white/30 bg-white/5 px-4 py-2 transition-all duration-200 hover:border-white/50">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <textarea
             value={value}
@@ -63,7 +63,7 @@ export default function ReflectionComposer({
               disabled={disabled}
               onClick={() => setOpen((prev) => !prev)}
               onMouseEnter={() => setOpen(true)}
-              className={`w-full sm:w-auto bg-black border border-white/20 text-xs px-3 py-2 rounded-full disabled:opacity-50 ${
+              className={`w-full sm:w-auto bg-black border border-white/20 text-xs px-3 py-2 rounded-full disabled:opacity-50 transition-all duration-200 hover:border-white/40 hover:scale-[1.02] ${
                 activeOption?.accent ? "text-purple-300" : "text-white"
               }`}
             >
@@ -71,7 +71,7 @@ export default function ReflectionComposer({
             </button>
             {open ? (
               <div
-                className="absolute left-0 sm:right-0 sm:left-auto mt-2 w-full sm:w-56 rounded-xl border border-white/10 bg-black shadow-lg z-10"
+                className="absolute left-0 sm:right-0 sm:left-auto mt-2 w-full sm:w-56 rounded-xl border border-white/10 bg-black shadow-lg z-10 animate-[fadeIn_0.15s_ease-out]"
                 onMouseEnter={() => setOpen(true)}
                 onMouseLeave={() => setOpen(false)}
               >
@@ -83,7 +83,7 @@ export default function ReflectionComposer({
                       onTypeChange(option.value);
                       setOpen(false);
                     }}
-                    className={`w-full text-left px-4 py-2 text-xs hover:bg-white/5 ${
+                    className={`w-full text-left px-4 py-2 text-xs transition-colors hover:bg-white/5 ${
                       option.accent ? "text-purple-300" : "text-white"
                     }`}
                   >
@@ -98,7 +98,7 @@ export default function ReflectionComposer({
       <button
         onClick={onSubmit}
         disabled={disabled}
-        className="h-10 w-10 rounded-full border border-white/40 text-white disabled:opacity-50"
+        className="h-10 w-10 rounded-full border border-white/40 text-white disabled:opacity-50 transition-transform duration-200 hover:scale-110"
         aria-label="Send reflection"
       >
         &gt;

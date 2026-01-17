@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { login } from "@/lib/api";
 import { setToken } from "@/lib/auth";
 
@@ -12,6 +11,24 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const handleGoogle = () => {
+    const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ?? "";
+    if (!clientId) {
+      setError("Google Client ID is missing.");
+      return;
+    }
+    const redirectUri = `${window.location.origin}/auth/google/callback`;
+    const params = new URLSearchParams({
+      client_id: clientId,
+      redirect_uri: redirectUri,
+      response_type: "code",
+      scope: "openid email profile",
+      access_type: "online",
+      prompt: "select_account"
+    });
+    window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
+  };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -44,6 +61,13 @@ export default function LoginPage() {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
+        <button
+          type="button"
+          onClick={handleGoogle}
+          className="w-full border border-white/20 px-4 py-2 text-sm hover:text-white/80"
+        >
+          Continue with Google
+        </button>
         <div className="space-y-2">
           <label className="text-sm text-white/70">Email or ^username</label>
           <input
@@ -74,14 +98,6 @@ export default function LoginPage() {
         </button>
       </form>
 
-      <div className="pt-2">
-        <Link
-          href="/register"
-          className="block w-full text-center border border-white/20 px-4 py-2 text-sm hover:text-white/80"
-        >
-          Create account
-        </Link>
-      </div>
     </section>
   );
 }

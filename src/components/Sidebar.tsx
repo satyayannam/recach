@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { clearToken, getToken } from "@/lib/auth";
+import { getCaretNotifications } from "@/lib/api";
 
 type NavItem = { href: string; label: string };
 
@@ -13,6 +14,7 @@ export default function Sidebar() {
   const [open, setOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [authed, setAuthed] = useState(false);
+  const [hasUnreadCarets, setHasUnreadCarets] = useState(false);
 
   useEffect(() => {
     setAuthed(Boolean(getToken()));
@@ -29,6 +31,54 @@ export default function Sidebar() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!authed) {
+      setHasUnreadCarets(false);
+      return;
+    }
+
+    let canceled = false;
+
+    const readSeenId = () => {
+      if (typeof window === "undefined") {
+        return 0;
+      }
+      const value = Number(localStorage.getItem("recach_caret_seen_id") ?? "0");
+      return Number.isNaN(value) ? 0 : value;
+    };
+
+    const loadUnread = async () => {
+      try {
+        const data = await getCaretNotifications(20);
+        if (canceled) {
+          return;
+        }
+        const maxId = data.length ? Math.max(...data.map((note) => note.id)) : 0;
+        setHasUnreadCarets(maxId > readSeenId());
+      } catch (err) {
+        if (!canceled) {
+          setHasUnreadCarets(false);
+        }
+      }
+    };
+
+    loadUnread();
+    const interval = setInterval(() => {
+      loadUnread();
+    }, 30000);
+
+    const handleCaretEvent = () => loadUnread();
+    window.addEventListener("recach-caret", handleCaretEvent);
+    window.addEventListener("storage", handleCaretEvent);
+
+    return () => {
+      canceled = true;
+      clearInterval(interval);
+      window.removeEventListener("recach-caret", handleCaretEvent);
+      window.removeEventListener("storage", handleCaretEvent);
+    };
+  }, [authed]);
+
   const navItems: NavItem[] = useMemo(() => {
     if (!authed) {
       return [
@@ -36,7 +86,6 @@ export default function Sidebar() {
         { href: "/search", label: "Search" },
         { href: "/leaderboard", label: "Leaderboard" },
         { href: "/login", label: "Login" },
-        { href: "/register", label: "Register" },
         { href: "/about", label: "About" },
         { href: "/how-it-works", label: "How it Works" }
       ];
@@ -97,6 +146,7 @@ export default function Sidebar() {
         <nav className="space-y-3 text-sm flex-1">
           {navItems.map((item) => {
             const isActive = pathname === item.href;
+            const showCaretBadge = item.href === "/inbox" && hasUnreadCarets;
             return (
               <Link
                 key={item.href}
@@ -106,7 +156,12 @@ export default function Sidebar() {
                   isActive ? "text-white font-semibold" : "text-white/60"
                 }`}
               >
-                {item.label}
+                <span className="flex items-center gap-2">
+                  <span>{item.label}</span>
+                  {showCaretBadge ? (
+                    <span className="inline-flex h-2 w-2 rounded-full bg-red-500" />
+                  ) : null}
+                </span>
               </Link>
             );
           })}

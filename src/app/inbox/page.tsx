@@ -4,10 +4,11 @@ import { useEffect, useState } from "react";
 import Protected from "@/components/Protected";
 import {
   approveRecommendation,
+  getCaretNotifications,
   getPendingRecommendations,
   rejectRecommendation
 } from "@/lib/api";
-import type { PendingRecommendation } from "@/lib/types";
+import type { CaretNotification, PendingRecommendation } from "@/lib/types";
 
 
 export const dynamic = "force-dynamic";
@@ -20,6 +21,7 @@ type NoteState = {
 };
 
 export default function InboxPage() {
+  const [caretNotifications, setCaretNotifications] = useState<CaretNotification[]>([]);
   const [requests, setRequests] = useState<PendingRecommendation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -33,8 +35,12 @@ export default function InboxPage() {
     }
     setError("");
     try {
-      const data = await getPendingRecommendations();
-      setRequests(data ?? []);
+      const [caretsData, recsData] = await Promise.all([
+        getCaretNotifications(50),
+        getPendingRecommendations()
+      ]);
+      setCaretNotifications(caretsData ?? []);
+      setRequests(recsData ?? []);
     } catch (err) {
       setError("Unable to load inbox.");
     } finally {
@@ -89,6 +95,23 @@ export default function InboxPage() {
     }));
   };
 
+  useEffect(() => {
+    if (!caretNotifications.length || typeof window === "undefined") {
+      return;
+    }
+    const maxId = Math.max(...caretNotifications.map((note) => note.id));
+    localStorage.setItem("recach_caret_seen_id", String(maxId));
+    window.dispatchEvent(new Event("recach-caret"));
+  }, [caretNotifications]);
+
+  const formatDate = (value: string) => {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      return value;
+    }
+    return date.toLocaleString();
+  };
+
   return (
     <Protected>
       <section className="space-y-6">
@@ -105,6 +128,34 @@ export default function InboxPage() {
         {error ? <p className="text-sm text-white/60">{error}</p> : null}
 
         <div className="space-y-4">
+          <div className="space-y-3">
+            <h2 className="text-sm text-white/70">Caret notifications</h2>
+            {caretNotifications.length === 0 ? (
+              <p className="text-sm text-white/60">No caret activity yet.</p>
+            ) : (
+              caretNotifications.map((note) => (
+                <div key={note.id} className="border-b border-white/10 pb-3">
+                  <p className="text-sm text-green-400">
+                    <a
+                      href={`/u/${encodeURIComponent(note.giver.username)}`}
+                      className="hover:text-green-200"
+                    >
+                      {note.giver.full_name}
+                    </a>{" "}
+                    gave your post a caret.
+                  </p>
+                  <p className="text-xs text-green-300/80">
+                    {note.post_type} · ^{note.caret_count}
+                  </p>
+                  <p className="text-xs text-white/60 line-clamp-2">
+                    {note.post_content}
+                  </p>
+                  <p className="text-xs text-white/40">{formatDate(note.created_at)}</p>
+                </div>
+              ))
+            )}
+          </div>
+
           {(requests ?? []).map((request) => (
             <div key={request.id} className="border-b border-white/10 pb-4">
               <div className="space-y-1">
@@ -114,7 +165,7 @@ export default function InboxPage() {
                 </p>
                 <p className="text-xs text-white/50">{request.rec_type}</p>
                 <p className="text-xs text-white/50">{request.reason}</p>
-                <p className="text-xs text-white/50">{request.created_at}</p>
+                <p className="text-xs text-white/50">{formatDate(request.created_at)}</p>
               </div>
 
               <div className="mt-3 flex flex-wrap gap-3">

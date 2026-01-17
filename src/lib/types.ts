@@ -15,13 +15,26 @@ export type PublicUserSearchOut = {
   headline?: string | null;
   achievement_total: number;
   recommendation_total: number;
+  caret_score?: number;
   username?: string;
   profile_photo_url?: string | null;
+  verified_education?: VerifiedEducation[];
+  verified_work?: VerifiedWork[];
 };
 
 export type RecommenderMini = {
   full_name: string;
   username: string;
+};
+
+export type VerifiedEducation = {
+  university_name: string;
+  degree_type: string;
+};
+
+export type VerifiedWork = {
+  company_name: string;
+  title: string;
 };
 
 export type PublicUserOut = {
@@ -31,6 +44,11 @@ export type PublicUserOut = {
   recommended_by: RecommenderMini[];
   recommender_count: number;
   profile_photo_url?: string | null;
+  achievement_total?: number;
+  recommendation_total?: number;
+  caret_score?: number;
+  verified_education?: VerifiedEducation[];
+  verified_work?: VerifiedWork[];
 };
 
 export type LeaderboardRow = {
@@ -39,6 +57,7 @@ export type LeaderboardRow = {
   user: {
     id: number;
     full_name: string;
+    username?: string;
   };
 };
 
@@ -52,6 +71,7 @@ export type CombinedLeaderboardRow = {
   user: {
     id: number;
     full_name: string;
+    username?: string;
   };
 };
 
@@ -72,6 +92,8 @@ export type UserProfile = {
   id: number;
   user_id: number;
   username?: string;
+  email?: string;
+  full_name?: string;
   profile_photo_url?: string | null;
   headline?: string | null;
   about?: string | null;
@@ -110,6 +132,21 @@ export type ScoreOut = {
 export type CaretScoreOut = {
   user_id: number;
   caret_score: number;
+};
+
+export type CaretNotification = {
+  id: number;
+  post_id: number;
+  post_type: string;
+  post_content: string;
+  caret_count: number;
+  created_at: string;
+  giver: {
+    id: number;
+    username: string;
+    full_name: string;
+    profile_photo_url?: string | null;
+  };
 };
 
 export type WorkCreate = {
@@ -245,6 +282,7 @@ export type PostUser = {
   username: string;
   full_name: string;
   university?: string | null;
+  profile_photo_url?: string | null;
 };
 
 export type PostOut = {
@@ -254,4 +292,5 @@ export type PostOut = {
   created_at: string;
   user: PostUser;
   caret_count: number;
+  has_caret?: boolean;
 };

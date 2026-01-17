@@ -3,6 +3,7 @@ import { clearAdminToken, clearToken, getAdminToken, getToken } from "./auth";
 import type {
   AdminVerification,
   CaretScoreOut,
+  CaretNotification,
   CombinedLeaderboardRow,
   EducationCreate,
   EducationOut,
@@ -138,6 +139,11 @@ export async function login(usernameOrEmail: string, password: string) {
   return data as { access_token: string; token_type: string };
 }
 
+export async function loginWithGoogle(code: string) {
+  const { data } = await api.post("/auth/google", { code });
+  return data as { access_token: string; token_type: string };
+}
+
 export async function registerUser(payload: {
   full_name: string;
   email: string;
@@ -236,6 +242,13 @@ export async function getMyRecommendationScore() {
 export async function getMyReflectionCaretScore() {
   const { data } = await api.get("/users/me/reflection-caret-score");
   return data as CaretScoreOut;
+}
+
+export async function getCaretNotifications(limit = 50) {
+  const { data } = await api.get("/users/me/caret-notifications", {
+    params: { limit }
+  });
+  return data as CaretNotification[];
 }
 
 export async function addWork(payload: WorkCreate) {

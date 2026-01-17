@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   getMyAchievementScore,
-  getPublicProfile,
   requestRecommendation,
   searchUsers
 } from "@/lib/api";
@@ -28,8 +27,6 @@ export default function SearchPage() {
   const [recType, setRecType] = useState("academic");
   const [reason, setReason] = useState("");
   const [actionStatus, setActionStatus] = useState<string>("");
-  const [universityMap, setUniversityMap] = useState<Record<string, string>>({});
-  const [profilePhotoMap, setProfilePhotoMap] = useState<Record<string, string>>({});
   const [hasToken, setHasToken] = useState(Boolean(getToken()));
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
   const { addToast } = useToast();
@@ -171,32 +168,22 @@ export default function SearchPage() {
     localStorage.setItem("recach-search-scores", JSON.stringify(nextCache));
   }, [results, addToast]);
 
-  const loadPublicDetails = async (username?: string) => {
-    if (!username) {
-      return;
+  const resolveProfilePhoto = (value?: string | null) => {
+    if (!value) {
+      return "";
     }
-    if (universityMap[username]) {
-      return;
-    }
-    try {
-      const data = await getPublicProfile(username);
-      const university =
-        (data as any).university_name ??
-        (Array.isArray((data as any).university_names)
-          ? String((data as any).university_names[0])
-          : null) ??
-        "Unknown University";
-      setUniversityMap((prev) => ({ ...prev, [username]: university }));
-      if (data.profile_photo_url) {
-        const resolved =
-          data.profile_photo_url.startsWith("http")
-            ? data.profile_photo_url
-            : `${apiBase}${data.profile_photo_url}`;
-        setProfilePhotoMap((prev) => ({ ...prev, [username]: resolved }));
-      }
-    } catch (err) {
-      setUniversityMap((prev) => ({ ...prev, [username]: "Unknown University" }));
-    }
+    return value.startsWith("http") ? value : `${apiBase}${value}`;
+  };
+
+  const formatVerifiedDetails = (user: PublicUserSearchOut) => {
+    const details: string[] = [];
+    (user.verified_education ?? []).forEach((edu) => {
+      details.push(`${edu.university_name} (${edu.degree_type})`);
+    });
+    (user.verified_work ?? []).forEach((work) => {
+      details.push(`${work.company_name} - ${work.title}`);
+    });
+    return details;
   };
 
   const openModal = (user: PublicUserSearchOut) => {
@@ -243,10 +230,8 @@ export default function SearchPage() {
           const canRecommend = hasToken;
           const isSelf = currentUserId !== null && user.user_id === currentUserId;
           const estimatedPoints = Math.max(5, Math.round(user.achievement_total * 0.1) + 5);
-          const university = user.username
-            ? universityMap[user.username] ?? "Unknown University"
-            : "Unknown University";
-          const profilePhoto = user.username ? profilePhotoMap[user.username] : "";
+          const verifiedDetails = formatVerifiedDetails(user);
+          const profilePhoto = resolveProfilePhoto(user.profile_photo_url);
 
           return (
             <div
@@ -254,18 +239,56 @@ export default function SearchPage() {
               className="relative border-b border-white/10 pb-3"
               onMouseEnter={() => {
                 setHoveredId(user.user_id);
-                loadPublicDetails(user.username);
               }}
               onMouseLeave={() => setHoveredId((prev) => (prev === user.user_id ? null : prev))}
             >
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-white/80">{user.full_name}</p>
+                <div className="flex items-center gap-3">
+                  <div className="h-9 w-9 overflow-hidden rounded-full border border-white/10 bg-black">
+                    {profilePhoto ? (
+                      <img
+                        src={profilePhoto}
+                        alt={`${user.full_name} photo`}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <div className="h-full w-full flex items-center justify-center text-[10px] text-white/40">
+                        No photo
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    {user.username ? (
+                      <Link
+                        href={`/u/${encodeURIComponent(user.username)}`}
+                        className="text-sm text-white/80 hover:text-white"
+                      >
+                        {user.full_name}
+                      </Link>
+                    ) : (
+                      <p className="text-sm text-white/80">{user.full_name}</p>
+                    )}
+                    {user.username ? (
+                      <Link
+                        href={`/u/${encodeURIComponent(user.username)}`}
+                        className="text-white/60 text-xs mono hover:text-white"
+                      >
+                        {username}
+                      </Link>
+                    ) : (
                   <p className="text-white/60 text-xs mono">{username}</p>
-                </div>
-                <div className="text-right text-xs">
+                )}
+                {verifiedDetails.length ? (
+                  <p className="text-xs text-white/50">{verifiedDetails[0]}</p>
+                ) : (
+                  <p className="text-xs text-white/40">Pending verification</p>
+                )}
+              </div>
+            </div>
+            <div className="text-right text-xs">
                   <p className="text-green-400">Achievement {user.achievement_total}</p>
                   <p className="text-purple-400">Recommendation {user.recommendation_total}</p>
+                  <p className="text-white/60">^ {user.caret_score ?? 0}</p>
                 </div>
               </div>
 
@@ -295,7 +318,16 @@ export default function SearchPage() {
                       )}
                     </div>
                     <div>
-                      <p className="text-sm text-white/80">{user.full_name}</p>
+                      {user.username ? (
+                        <Link
+                          href={`/u/${encodeURIComponent(user.username)}`}
+                          className="text-sm text-white/80 hover:text-white"
+                        >
+                          {user.full_name}
+                        </Link>
+                      ) : (
+                        <p className="text-sm text-white/80">{user.full_name}</p>
+                      )}
                       <p className="text-xs text-white/50">{username}</p>
                     </div>
                   </div>
@@ -305,7 +337,15 @@ export default function SearchPage() {
                   ) : (
                     <p className="text-sm text-white/50">No public headline.</p>
                   )}
-                  <p className="text-xs text-white/50 mt-2">University: {university}</p>
+                  {verifiedDetails.length ? (
+                    <div className="text-xs text-white/50 mt-2 space-y-1">
+                      {verifiedDetails.map((detail, idx) => (
+                        <p key={`${user.user_id}-${idx}`}>{detail}</p>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-white/40 mt-2">Pending verification</p>
+                  )}
                   <p className="text-xs text-white/50 mt-3">
                     Estimated score impact:{" "}
                     <span className="text-white/80">+{estimatedPoints} points</span>

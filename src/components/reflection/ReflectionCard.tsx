@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { PostOut } from "@/lib/types";
 
 type ReflectionCardProps = {
@@ -45,16 +45,53 @@ export default function ReflectionCard({
   const [draft, setDraft] = useState(reflection.content);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmEdit, setConfirmEdit] = useState(false);
+  const apiBase = useMemo(
+    () =>
+      process.env.NEXT_PUBLIC_API_URL ??
+      process.env.NEXT_PUBLIC_API_BASE ??
+      process.env.NEXT_PUBLIC_API_BASE_URL ??
+      "",
+    []
+  );
 
   useEffect(() => {
     setDraft(reflection.content);
   }, [reflection.content]);
 
+  const profilePhoto = reflection.user.profile_photo_url
+    ? reflection.user.profile_photo_url.startsWith("http")
+      ? reflection.user.profile_photo_url
+      : `${apiBase}${reflection.user.profile_photo_url}`
+    : "";
+
   return (
-    <article className="border border-white/20 rounded-3xl bg-black px-6 py-5 space-y-4">
-      <div className="text-xs text-white/60 flex flex-wrap gap-2">
-        <span>{reflection.user.full_name}</span>
-        <span className="text-white/30">@{reflection.user.username}</span>
+    <article className="border border-white/20 rounded-3xl bg-black px-6 py-5 space-y-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-white/40">
+      <div className="text-xs text-white/60 flex flex-wrap items-center gap-2">
+        <div className="h-8 w-8 overflow-hidden rounded-full border border-white/10 bg-black">
+          {profilePhoto ? (
+            <img
+              src={profilePhoto}
+              alt={`${reflection.user.full_name} photo`}
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            <div className="h-full w-full flex items-center justify-center text-[10px] text-white/40">
+              No photo
+            </div>
+          )}
+        </div>
+        <a
+          href={`/u/${encodeURIComponent(reflection.user.username)}`}
+          className="text-white/60 hover:text-white"
+        >
+          {reflection.user.full_name}
+        </a>
+        <a
+          href={`/u/${encodeURIComponent(reflection.user.username)}`}
+          className="text-white/30 hover:text-white/70"
+        >
+          @{reflection.user.username}
+        </a>
         {reflection.user.university ? (
           <span className="text-white/30">{reflection.user.university}</span>
         ) : null}

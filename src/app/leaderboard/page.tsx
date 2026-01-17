@@ -120,7 +120,16 @@ export default function LeaderboardPage() {
                 <div className="flex items-center gap-4">
                   <span className="text-white/60">#{entry.rank}</span>
                   <div>
-                    <p className={`${accent}`}>{entry.user.full_name}</p>
+                    {entry.user.username ? (
+                      <a
+                        href={`/u/${encodeURIComponent(entry.user.username)}`}
+                        className={`${accent} hover:opacity-80`}
+                      >
+                        {entry.user.full_name}
+                      </a>
+                    ) : (
+                      <p className={`${accent}`}>{entry.user.full_name}</p>
+                    )}
                   </div>
                 </div>
                 {type === "combined" ? (

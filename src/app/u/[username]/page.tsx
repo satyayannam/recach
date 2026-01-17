@@ -6,6 +6,7 @@ import { getMyAchievementScore, getPublicProfile, requestRecommendation } from "
 import { getToken } from "@/lib/auth";
 import type { PublicUserOut } from "@/lib/types";
 import { useToast } from "@/components/ToastProvider";
+import { listPostsByUser, togglePostCaret } from "@/lib/posts";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +24,7 @@ export default function ProfilePage() {
   const [status, setStatus] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
+  const [posts, setPosts] = useState<Array<{ id: number; content: string; created_at: string; type: string; caret_count?: number }>>([]);
   const { addToast } = useToast();
 
   const apiBase =
@@ -49,6 +51,10 @@ export default function ProfilePage() {
         const data = await getPublicProfile(decoded);
         if (!canceled) {
           setProfile(data);
+          if (data?.id) {
+            const postsData = await listPostsByUser(data.id, 50);
+            setPosts(postsData);
+          }
         }
       } catch (err) {
         if (!canceled) {
@@ -115,6 +121,9 @@ export default function ProfilePage() {
     profile.profile_photo_url && !profile.profile_photo_url.startsWith("http")
       ? `${apiBase}${profile.profile_photo_url}`
       : profile.profile_photo_url ?? "";
+  const verifiedEducation = profile.verified_education ?? [];
+  const verifiedWork = profile.verified_work ?? [];
+  const hasVerifiedDetails = verifiedEducation.length > 0 || verifiedWork.length > 0;
 
   return (
     <section className="space-y-6">
@@ -134,39 +143,39 @@ export default function ProfilePage() {
             )}
           </div>
           <div>
-            <h1 className="text-2xl font-semibold">{profile.full_name}</h1>
-            <p className="text-white/60 text-sm">^{profile.username}</p>
+            <a
+              href={`/u/${encodeURIComponent(profile.username)}`}
+              className="text-2xl font-semibold hover:text-white/80"
+            >
+              {profile.full_name}
+            </a>
+            <a
+              href={`/u/${encodeURIComponent(profile.username)}`}
+              className="text-white/60 text-sm hover:text-white/80 block"
+            >
+              ^{profile.username}
+            </a>
           </div>
         </div>
+        <div className="mt-3 text-sm text-white/60 space-y-1">
+          {hasVerifiedDetails ? (
+            <>
+              {verifiedEducation.map((edu) => (
+                <p key={`${edu.university_name}-${edu.degree_type}`}>
+                  {edu.university_name} ({edu.degree_type})
+                </p>
+              ))}
+              {verifiedWork.map((work) => (
+                <p key={`${work.company_name}-${work.title}`}>
+                  {work.company_name} - {work.title}
+                </p>
+              ))}
+            </>
+          ) : (
+            <p className="text-white/40">Pending verification</p>
+          )}
+        </div>
       </header>
-
-      <div className="space-y-2">
-        <p className="text-sm text-white/50">Recommenders</p>
-        {profile.recommended_by?.length ? (
-          <div className="text-white/80 text-sm">
-            <span>
-              Recommended by:{" "}
-              {(showAllRecommenders
-                ? profile.recommended_by
-                : profile.recommended_by.slice(0, 4)
-              )
-                .map((rec) => rec.username ? `^${rec.username}` : rec.full_name)
-                .join(", ")}
-            </span>
-            {profile.recommender_count > 4 ? (
-              <button
-                type="button"
-                className="ml-2 text-xs text-white/60 hover:text-white/80"
-                onClick={() => setShowAllRecommenders((prev) => !prev)}
-              >
-                {showAllRecommenders ? "See less" : "See full list"}
-              </button>
-            ) : null}
-          </div>
-        ) : (
-          <p className="text-white/80 text-sm">None yet.</p>
-        )}
-      </div>
 
       {hasToken ? (
         <div className="border-t border-white/10 pt-4 space-y-3">
@@ -191,6 +200,112 @@ export default function ProfilePage() {
           {status ? <p className="text-sm text-white/60">{status}</p> : null}
         </div>
       ) : null}
+
+      <div className="space-y-2">
+        <p className="text-sm text-white/50">Recommenders</p>
+        {profile.recommended_by?.length ? (
+          <div className="text-white/80 text-sm">
+            <span>
+              Recommended by:{" "}
+              {(showAllRecommenders
+                ? profile.recommended_by
+                : profile.recommended_by.slice(0, 4)
+              )
+                .map((rec, idx) =>
+                  rec.username ? (
+                    <a
+                      key={`${rec.username}-${idx}`}
+                      href={`/u/${encodeURIComponent(rec.username)}`}
+                      className="text-white/80 hover:text-white"
+                    >
+                      ^{rec.username}
+                    </a>
+                  ) : (
+                    <span key={`${rec.full_name}-${idx}`}>{rec.full_name}</span>
+                  )
+                )
+                .reduce<React.ReactNode[]>((acc, item, idx) => {
+                  if (idx > 0) {
+                    acc.push(", ");
+                  }
+                  acc.push(item);
+                  return acc;
+                }, [])}
+            </span>
+            {profile.recommender_count > 4 ? (
+              <button
+                type="button"
+                className="ml-2 text-xs text-white/60 hover:text-white/80"
+                onClick={() => setShowAllRecommenders((prev) => !prev)}
+              >
+                {showAllRecommenders ? "See less" : "See full list"}
+              </button>
+            ) : null}
+          </div>
+        ) : (
+          <p className="text-white/80 text-sm">None yet.</p>
+        )}
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-3">
+        <div className="border border-white/10 p-4">
+          <p className="text-xs text-white/50">Achievement score</p>
+          <p className="text-lg text-green-400">
+            {profile.achievement_total ?? "-"}
+          </p>
+        </div>
+        <div className="border border-white/10 p-4">
+          <p className="text-xs text-white/50">Recommendation score</p>
+          <p className="text-lg text-purple-400">
+            {profile.recommendation_total ?? "-"}
+          </p>
+        </div>
+        <div className="border border-white/10 p-4">
+          <p className="text-xs text-white/50">Caret score</p>
+          <p className="text-lg text-white/80">
+            ^{profile.caret_score ?? "-"}
+          </p>
+        </div>
+      </div>
+
+      <div className="space-y-3">
+        <h2 className="text-lg font-semibold">Posts</h2>
+        {posts.length === 0 ? (
+          <p className="text-sm text-white/60">No posts yet.</p>
+        ) : (
+          <div className="space-y-3">
+            {posts.map((post) => (
+              <div key={post.id} className="border border-white/10 p-4">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-purple-300">{post.type}</p>
+                  <button
+                    className="border border-white/30 px-3 py-1 rounded-full text-xs text-white/70"
+                    disabled={currentUserId === profile.id}
+                    onClick={async () => {
+                      try {
+                        const result = await togglePostCaret(post.id);
+                        setPosts((prev) =>
+                          prev.map((item) =>
+                            item.id === post.id
+                              ? { ...item, caret_count: result.caret_count }
+                              : item
+                          )
+                        );
+                      } catch (err) {
+                        addToast("Unable to add caret.", "text-purple-300");
+                      }
+                    }}
+                  >
+                    ^{post.caret_count ?? 0}
+                  </button>
+                </div>
+                <p className="text-sm text-white/80 mt-2">{post.content}</p>
+                <p className="text-xs text-white/40 mt-2">{post.created_at}</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       {modalOpen ? (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/60">
