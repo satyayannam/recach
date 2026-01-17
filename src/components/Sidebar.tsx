@@ -63,9 +63,13 @@ export default function Sidebar() {
           : 0;
         setHasUnreadCarets(maxId > readSeenId());
         const pendingContact = (inboxData ?? []).some(
-          (item) => item.type === "CONTACT_REQUEST" && item.status === "PENDING"
+          (item) =>
+            item.type === "CONTACT_REQUEST" && item.status === "PENDING"
         );
-        setHasUnreadInbox(pendingContact);
+        const hasUnread = (inboxData ?? []).some(
+          (item) => item.status === "UNREAD"
+        );
+        setHasUnreadInbox(pendingContact || hasUnread);
       } catch (err) {
         if (!canceled) {
           setHasUnreadCarets(false);

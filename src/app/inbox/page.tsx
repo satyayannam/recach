@@ -27,6 +27,7 @@ type NoteState = {
 export default function InboxPage() {
   const [caretNotifications, setCaretNotifications] = useState<CaretNotification[]>([]);
   const [contactRequests, setContactRequests] = useState<InboxItem[]>([]);
+  const [generalNotifications, setGeneralNotifications] = useState<InboxItem[]>([]);
   const [requests, setRequests] = useState<PendingRecommendation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -49,6 +50,11 @@ export default function InboxPage() {
       setRequests(recsData ?? []);
       setContactRequests(
         (inboxData ?? []).filter((item) => item.type === "CONTACT_REQUEST")
+      );
+      setGeneralNotifications(
+        (inboxData ?? []).filter(
+          (item) => item.type !== "CONTACT_REQUEST"
+        )
       );
     } catch (err) {
       setError("Unable to load inbox.");
@@ -221,6 +227,83 @@ export default function InboxPage() {
                     ) : null}
                   </div>
                 );
+              })
+            )}
+          </div>
+
+          <div className="space-y-3">
+            <h2 className="text-sm text-white/70">Notifications</h2>
+            {generalNotifications.length === 0 ? (
+              <p className="text-sm text-white/60">No notifications yet.</p>
+            ) : (
+              generalNotifications.map((item) => {
+                const payload = item.payload_json as Record<string, any>;
+                if (item.type === "CONTACT_ACCEPTED") {
+                  return (
+                    <div key={item.id} className="border-b border-white/10 pb-3">
+                      <p className="text-sm text-white/80">
+                        {payload.target_name} approved your contact request.
+                      </p>
+                      <p className="text-xs text-white/50">
+                        Method: {payload.contact_method ?? "Not set"}
+                      </p>
+                      {payload.request_id ? (
+                        <button
+                          className="mt-2 border border-white/20 px-3 py-1 text-xs hover:text-white/80"
+                          onClick={async () => {
+                            try {
+                              const contact = await getContactForRequest(
+                                String(payload.request_id)
+                              );
+                              setGeneralNotifications((prev) =>
+                                prev.map((note) =>
+                                  note.id === item.id
+                                    ? {
+                                        ...note,
+                                        payload_json: {
+                                          ...note.payload_json,
+                                          contact_value: `${contact.method}: ${contact.value}`
+                                        }
+                                      }
+                                    : note
+                                )
+                              );
+                            } catch (err) {
+                              setError("Unable to load contact.");
+                            }
+                          }}
+                        >
+                          View contact
+                        </button>
+                      ) : null}
+                      {payload.contact_value ? (
+                        <p className="text-xs text-white/70 mt-2">
+                          {payload.contact_value}
+                        </p>
+                      ) : null}
+                    </div>
+                  );
+                }
+                if (item.type === "RECOMMENDATION_APPROVED") {
+                  return (
+                    <div key={item.id} className="border-b border-white/10 pb-3">
+                      <p className="text-sm text-white/80">
+                        {payload.recommender_name} approved your recommendation.
+                      </p>
+                      {payload.note_title ? (
+                        <p className="text-xs text-white/60 mt-1">
+                          {payload.note_title}
+                        </p>
+                      ) : null}
+                      {payload.note_body ? (
+                        <p className="text-xs text-white/50 mt-1">
+                          {payload.note_body}
+                        </p>
+                      ) : null}
+                    </div>
+                  );
+                }
+                return null;
               })
             )}
           </div>
