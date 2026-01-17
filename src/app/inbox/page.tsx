@@ -4,11 +4,15 @@ import { useEffect, useState } from "react";
 import Protected from "@/components/Protected";
 import {
   approveRecommendation,
+  acceptContactRequest,
+  getInboxItems,
+  getContactForRequest,
+  ignoreContactRequest,
   getCaretNotifications,
   getPendingRecommendations,
   rejectRecommendation
 } from "@/lib/api";
-import type { CaretNotification, PendingRecommendation } from "@/lib/types";
+import type { CaretNotification, InboxItem, PendingRecommendation } from "@/lib/types";
 
 
 export const dynamic = "force-dynamic";
@@ -22,6 +26,7 @@ type NoteState = {
 
 export default function InboxPage() {
   const [caretNotifications, setCaretNotifications] = useState<CaretNotification[]>([]);
+  const [contactRequests, setContactRequests] = useState<InboxItem[]>([]);
   const [requests, setRequests] = useState<PendingRecommendation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -35,12 +40,16 @@ export default function InboxPage() {
     }
     setError("");
     try {
-      const [caretsData, recsData] = await Promise.all([
+      const [caretsData, recsData, inboxData] = await Promise.all([
         getCaretNotifications(50),
-        getPendingRecommendations()
+        getPendingRecommendations(),
+        getInboxItems()
       ]);
       setCaretNotifications(caretsData ?? []);
       setRequests(recsData ?? []);
+      setContactRequests(
+        (inboxData ?? []).filter((item) => item.type === "CONTACT_REQUEST")
+      );
     } catch (err) {
       setError("Unable to load inbox.");
     } finally {
@@ -153,6 +162,66 @@ export default function InboxPage() {
                   <p className="text-xs text-white/40">{formatDate(note.created_at)}</p>
                 </div>
               ))
+            )}
+          </div>
+
+          <div className="space-y-3">
+            <h2 className="text-sm text-white/70">Contact requests</h2>
+            {contactRequests.length === 0 ? (
+              <p className="text-sm text-white/60">No contact requests.</p>
+            ) : (
+              contactRequests.map((item) => {
+                const payload = item.payload_json as Record<string, any>;
+                const requestId = String(payload.request_id ?? "");
+                const contactKey = `contact-${requestId}`;
+                return (
+                  <div key={item.id} className="border-b border-white/10 pb-3">
+                    <p className="text-sm text-white/80">
+                      {payload.requester_name} requested your contact for{" "}
+                      {payload.course_number} ({payload.course_name})
+                      {payload.university ? ` · ${payload.university}` : ""}
+                    </p>
+                    <p className="text-xs text-white/50">
+                      Status: {item.status}
+                    </p>
+                    {item.status === "PENDING" ? (
+                      <div className="mt-2 flex gap-2">
+                        <button
+                          className="border border-white/20 px-3 py-1 text-xs hover:text-white/80"
+                          onClick={async () => {
+                            try {
+                              await acceptContactRequest(requestId);
+                              await loadInbox(true);
+                            } catch (err) {
+                              setError("Unable to accept request.");
+                            }
+                          }}
+                        >
+                          Accept
+                        </button>
+                        <button
+                          className="border border-white/20 px-3 py-1 text-xs hover:text-white/80"
+                          onClick={async () => {
+                            try {
+                              await ignoreContactRequest(requestId);
+                              await loadInbox(true);
+                            } catch (err) {
+                              setError("Unable to ignore request.");
+                            }
+                          }}
+                        >
+                          Ignore
+                        </button>
+                      </div>
+                    ) : null}
+                    {item.status === "ACCEPTED" ? (
+                      <p className="text-xs text-white/50 mt-2">
+                        Accepted. The requester can now view your contact.
+                      </p>
+                    ) : null}
+                  </div>
+                );
+              })
             )}
           </div>
 

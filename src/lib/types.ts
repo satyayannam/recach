@@ -253,6 +253,58 @@ export type AdminVerification = {
   admin_notes?: string | null;
 };
 
+export type UserCourse = {
+  id: string;
+  user_id: number;
+  course_name: string;
+  course_number: string;
+  professor?: string | null;
+  grade: string;
+  program_level: string;
+  term?: string | null;
+  visibility: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type CoursePerson = {
+  user_id: number;
+  name: string;
+  username?: string | null;
+  university?: string | null;
+  course_id: string;
+  program_level: string;
+  grade: string;
+  professor?: string | null;
+  term?: string | null;
+  can_request_contact: boolean;
+  request_status?: string | null;
+  request_id?: string | null;
+};
+
+export type CourseSearchGroup = {
+  course_number: string;
+  course_name: string;
+  people: CoursePerson[];
+};
+
+export type ContactMethod = {
+  id: string;
+  user_id: number;
+  method: string;
+  value: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type InboxItem = {
+  id: string;
+  type: string;
+  status: string;
+  payload_json: Record<string, unknown>;
+  created_at: string;
+};
+
 export type ReflectionType =
   | "story";
 

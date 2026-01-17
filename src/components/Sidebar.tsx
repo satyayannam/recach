@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { clearToken, getToken } from "@/lib/auth";
-import { getCaretNotifications } from "@/lib/api";
+import { getCaretNotifications, getInboxItems } from "@/lib/api";
 
 type NavItem = { href: string; label: string };
 
@@ -15,6 +15,7 @@ export default function Sidebar() {
   const [addOpen, setAddOpen] = useState(false);
   const [authed, setAuthed] = useState(false);
   const [hasUnreadCarets, setHasUnreadCarets] = useState(false);
+  const [hasUnreadInbox, setHasUnreadInbox] = useState(false);
 
   useEffect(() => {
     setAuthed(Boolean(getToken()));
@@ -34,6 +35,7 @@ export default function Sidebar() {
   useEffect(() => {
     if (!authed) {
       setHasUnreadCarets(false);
+      setHasUnreadInbox(false);
       return;
     }
 
@@ -49,15 +51,25 @@ export default function Sidebar() {
 
     const loadUnread = async () => {
       try {
-        const data = await getCaretNotifications(20);
+        const [caretsData, inboxData] = await Promise.all([
+          getCaretNotifications(20),
+          getInboxItems()
+        ]);
         if (canceled) {
           return;
         }
-        const maxId = data.length ? Math.max(...data.map((note) => note.id)) : 0;
+        const maxId = caretsData.length
+          ? Math.max(...caretsData.map((note) => note.id))
+          : 0;
         setHasUnreadCarets(maxId > readSeenId());
+        const pendingContact = (inboxData ?? []).some(
+          (item) => item.type === "CONTACT_REQUEST" && item.status === "PENDING"
+        );
+        setHasUnreadInbox(pendingContact);
       } catch (err) {
         if (!canceled) {
           setHasUnreadCarets(false);
+          setHasUnreadInbox(false);
         }
       }
     };
@@ -84,6 +96,7 @@ export default function Sidebar() {
       return [
         { href: "/reflection", label: "Circle" },
         { href: "/search", label: "Search" },
+        { href: "/courses/search", label: "Courses" },
         { href: "/leaderboard", label: "Leaderboard" },
         { href: "/login", label: "Login" },
         { href: "/about", label: "About" },
@@ -94,6 +107,7 @@ export default function Sidebar() {
     const items = [
       { href: "/reflection", label: "Circle" },
       { href: "/me", label: "My Profile" },
+      { href: "/courses", label: "Courses" },
       { href: "/search", label: "Search" },
       { href: "/leaderboard", label: "Leaderboard" },
       { href: "/inbox", label: "Inbox" },
@@ -146,7 +160,8 @@ export default function Sidebar() {
         <nav className="space-y-3 text-sm flex-1">
           {navItems.map((item) => {
             const isActive = pathname === item.href;
-            const showCaretBadge = item.href === "/inbox" && hasUnreadCarets;
+            const showCaretBadge =
+              item.href === "/inbox" && (hasUnreadCarets || hasUnreadInbox);
             return (
               <Link
                 key={item.href}

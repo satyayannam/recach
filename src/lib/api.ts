@@ -2,19 +2,23 @@ import axios, { AxiosHeaders } from "axios";
 import { clearAdminToken, clearToken, getAdminToken, getToken } from "./auth";
 import type {
   AdminVerification,
-  CaretScoreOut,
   CaretNotification,
+  CaretScoreOut,
   CombinedLeaderboardRow,
+  ContactMethod,
+  CourseSearchGroup,
   EducationCreate,
   EducationOut,
   EducationScoreOut,
   FeedItem,
+  InboxItem,
   LeaderboardRow,
   PendingRecommendation,
   PublicUserOut,
   PublicUserSearchOut,
   ScoreOut,
   UserProfile,
+  UserCourse,
   WorkCreate,
   WorkOut,
   WorkScoreOut
@@ -62,7 +66,15 @@ export const adminApi = axios.create({
   headers: AxiosHeaders.from(defaultHeaders)
 });
 
-const protectedPrefixes = ["/me", "/recommendations", "/education", "/work", "/users/me", "/posts"];
+const protectedPrefixes = [
+  "/me",
+  "/recommendations",
+  "/education",
+  "/work",
+  "/users/me",
+  "/posts",
+  "/api"
+];
 
 const resolvePathname = (url?: string) => {
   if (!url) {
@@ -293,4 +305,71 @@ export async function rejectAdminVerification(requestId: number, admin_notes?: s
     admin_notes
   });
   return data as AdminVerification;
+}
+
+export async function createCourse(payload: {
+  course_name: string;
+  course_number: string;
+  professor?: string | null;
+  grade: string;
+  program_level: string;
+  term?: string | null;
+  visibility: string;
+}) {
+  const { data } = await api.post("/api/courses", payload);
+  return data as UserCourse;
+}
+
+export async function listMyCourses() {
+  const { data } = await api.get("/api/courses/me");
+  return data as UserCourse[];
+}
+
+export async function deleteCourse(courseId: string) {
+  const { data } = await api.delete(`/api/courses/${courseId}`);
+  return data as { status: string };
+}
+
+export async function searchCourses(query: string) {
+  const { data } = await api.get("/api/courses/search", { params: { q: query } });
+  return data as CourseSearchGroup[];
+}
+
+export async function setContactMethod(payload: { method: string; value: string }) {
+  const { data } = await api.put("/api/profile/contact-method", payload);
+  return data as ContactMethod;
+}
+
+export async function getMyContactMethod() {
+  const { data } = await api.get("/api/profile/contact-method/me");
+  return data as ContactMethod;
+}
+
+export async function createContactRequest(payload: {
+  target_id: number;
+  course_id: string;
+  message?: string | null;
+}) {
+  const { data } = await api.post("/api/contact-requests", payload);
+  return data as { id: string; status: string };
+}
+
+export async function acceptContactRequest(requestId: string) {
+  const { data } = await api.post(`/api/contact-requests/${requestId}/accept`);
+  return data as { status: string };
+}
+
+export async function ignoreContactRequest(requestId: string) {
+  const { data } = await api.post(`/api/contact-requests/${requestId}/ignore`);
+  return data as { status: string };
+}
+
+export async function getContactForRequest(requestId: string) {
+  const { data } = await api.get(`/api/contact-requests/${requestId}/contact`);
+  return data as { method: string; value: string };
+}
+
+export async function getInboxItems() {
+  const { data } = await api.get("/api/inbox");
+  return data as InboxItem[];
 }

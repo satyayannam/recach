@@ -4,9 +4,11 @@ import { useEffect, useRef, useState } from "react";
 import Protected from "@/components/Protected";
 import {
   getMyAchievementScore,
+  getMyContactMethod,
   getMyProfile,
   getMyRecommendationScore,
   getMyReflectionCaretScore,
+  setContactMethod,
   updateMyProfile,
   uploadProfilePhoto
 } from "@/lib/api";
@@ -61,6 +63,9 @@ export default function MePage() {
   const [editing, setEditing] = useState(false);
   const [photoUploading, setPhotoUploading] = useState(false);
   const [posts, setPosts] = useState<string[]>([]);
+  const [contactMethod, setContactMethodState] = useState("EMAIL");
+  const [contactValue, setContactValue] = useState("");
+  const [contactStatus, setContactStatus] = useState("");
   const { addToast } = useToast();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -141,6 +146,14 @@ export default function MePage() {
           ? items.filter((item) => item.user.id === myId).map((item) => item.content)
           : [];
         setPosts(mine);
+      }
+
+      try {
+        const method = await getMyContactMethod();
+        setContactMethodState(method.method);
+        setContactValue(method.value);
+      } catch {
+        setContactValue("");
       }
     } catch (err: any) {
       if (!silent) {
@@ -466,6 +479,60 @@ export default function MePage() {
             </button>
           </form>
         )}
+
+        <div className="space-y-3 max-w-2xl">
+          <h2 className="text-lg font-semibold">Point of Contact</h2>
+          <div className="grid gap-3 md:grid-cols-[160px_1fr_auto]">
+            <select
+              value={contactMethod}
+              onChange={(event) => setContactMethodState(event.target.value)}
+              className="bg-black border border-white/20 px-3 py-2 text-sm"
+            >
+              {[
+                "INSTAGRAM",
+                "PHONE",
+                "EMAIL",
+                "LINKEDIN",
+                "DISCORD",
+                "TELEGRAM",
+                "WHATSAPP",
+                "OTHER"
+              ].map((method) => (
+                <option key={method} value={method}>
+                  {method}
+                </option>
+              ))}
+            </select>
+            <input
+              value={contactValue}
+              onChange={(event) => setContactValue(event.target.value)}
+              className="bg-black border border-white/20 px-3 py-2 text-sm"
+              placeholder="Contact value"
+            />
+            <button
+              type="button"
+              className="border border-white/20 px-3 py-2 text-sm hover:text-white/80"
+              onClick={async () => {
+                setContactStatus("");
+                try {
+                  await setContactMethod({
+                    method: contactMethod,
+                    value: contactValue
+                  });
+                  setContactStatus("Saved.");
+                } catch (err: any) {
+                  const detail = err?.response?.data?.detail;
+                  setContactStatus(
+                    typeof detail === "string" ? detail : "Unable to save contact."
+                  );
+                }
+              }}
+            >
+              Save
+            </button>
+          </div>
+          {contactStatus ? <p className="text-sm text-white/60">{contactStatus}</p> : null}
+        </div>
 
         <div className="space-y-3 max-w-2xl">
           <h2 className="text-lg font-semibold">My posts</h2>
