@@ -5,6 +5,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { getMyProfile, loginWithGoogle } from "@/lib/api";
 import { setToken } from "@/lib/auth";
 
+export const dynamic = "force-dynamic";
+
 export default function GoogleCallbackPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
