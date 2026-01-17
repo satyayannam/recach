@@ -62,7 +62,7 @@ export const adminApi = axios.create({
   headers: AxiosHeaders.from(defaultHeaders)
 });
 
-const protectedPrefixes = ["/me", "/recommendations", "/education", "/work", "/users/me"];
+const protectedPrefixes = ["/me", "/recommendations", "/education", "/work", "/users/me", "/posts"];
 
 const resolvePathname = (url?: string) => {
   if (!url) {
