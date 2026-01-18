@@ -6,13 +6,22 @@ import {
   approveRecommendation,
   acceptContactRequest,
   getInboxItems,
+  getInboxPosts,
   getContactForRequest,
   ignoreContactRequest,
   getCaretNotifications,
   getPendingRecommendations,
   rejectRecommendation
 } from "@/lib/api";
-import type { CaretNotification, InboxItem, PendingRecommendation } from "@/lib/types";
+import { setPostReplyOwnerReaction, togglePostReplyCaret } from "@/lib/posts";
+import type {
+  CaretNotification,
+  InboxItem,
+  InboxPostCard,
+  InboxPostReplyOut,
+  PendingRecommendation,
+  PostReplyOwnerReaction
+} from "@/lib/types";
 
 
 export const dynamic = "force-dynamic";
@@ -28,12 +37,15 @@ export default function InboxPage() {
   const [caretNotifications, setCaretNotifications] = useState<CaretNotification[]>([]);
   const [contactRequests, setContactRequests] = useState<InboxItem[]>([]);
   const [generalNotifications, setGeneralNotifications] = useState<InboxItem[]>([]);
+  const [postCards, setPostCards] = useState<InboxPostCard[]>([]);
+  const [postNotifications, setPostNotifications] = useState<InboxItem[]>([]);
   const [requests, setRequests] = useState<PendingRecommendation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [expandedId, setExpandedId] = useState<string | number | null>(null);
   const [notes, setNotes] = useState<Record<string | number, NoteState>>({});
   const [actionId, setActionId] = useState<string | number | null>(null);
+  const [postActionId, setPostActionId] = useState<number | null>(null);
 
   const loadInbox = async (silent = false) => {
     if (!silent) {
@@ -41,21 +53,31 @@ export default function InboxPage() {
     }
     setError("");
     try {
-      const [caretsData, recsData, inboxData] = await Promise.all([
+      const [caretsData, recsData, inboxData, inboxPosts] = await Promise.all([
         getCaretNotifications(50),
         getPendingRecommendations(),
-        getInboxItems()
+        getInboxItems(),
+        getInboxPosts()
       ]);
       setCaretNotifications(caretsData ?? []);
       setRequests(recsData ?? []);
       setContactRequests(
         (inboxData ?? []).filter((item) => item.type === "CONTACT_REQUEST")
       );
-      setGeneralNotifications(
+      setPostNotifications(
         (inboxData ?? []).filter(
-          (item) => item.type !== "CONTACT_REQUEST"
+          (item) => item.type === "POST_REPLY" || item.type === "POST_REPLY_REACTION"
         )
       );
+      setGeneralNotifications(
+        (inboxData ?? []).filter(
+          (item) =>
+            item.type !== "CONTACT_REQUEST" &&
+            item.type !== "POST_REPLY" &&
+            item.type !== "POST_REPLY_REACTION"
+        )
+      );
+      setPostCards(inboxPosts ?? []);
     } catch (err) {
       setError("Unable to load inbox.");
     } finally {
@@ -127,6 +149,73 @@ export default function InboxPage() {
     return date.toLocaleString();
   };
 
+  const replyStyles: Record<
+    InboxPostReplyOut["reply_type"],
+    { badge: string; border: string }
+  > = {
+    validate: {
+      badge: "bg-emerald-500/15 text-emerald-200 border border-emerald-400/40",
+      border: "border-emerald-400/40"
+    },
+    context: {
+      badge: "bg-sky-500/15 text-sky-200 border border-sky-400/40",
+      border: "border-sky-400/40"
+    },
+    impact: {
+      badge: "bg-violet-500/15 text-violet-200 border border-violet-400/40",
+      border: "border-violet-400/40"
+    },
+    clarify: {
+      badge: "bg-amber-500/15 text-amber-200 border border-amber-400/40",
+      border: "border-amber-400/40"
+    },
+    challenge: {
+      badge: "bg-red-500/15 text-red-200 border border-red-400/50",
+      border: "border-red-400/50"
+    }
+  };
+
+  const handleToggleReplyCaret = async (replyId: number) => {
+    setPostActionId(replyId);
+    try {
+      const result = await togglePostReplyCaret(replyId);
+      setPostCards((prev) =>
+        prev.map((card) => ({
+          ...card,
+          replies: card.replies.map((reply) =>
+            reply.id === replyId ? { ...reply, caret_given: result.is_given } : reply
+          )
+        }))
+      );
+    } catch (err) {
+      setError("Unable to update caret.");
+    } finally {
+      setPostActionId(null);
+    }
+  };
+
+  const handleSendReaction = async (
+    replyId: number,
+    reaction: PostReplyOwnerReaction
+  ) => {
+    setPostActionId(replyId);
+    try {
+      await setPostReplyOwnerReaction(replyId, reaction);
+      setPostCards((prev) =>
+        prev.map((card) => ({
+          ...card,
+          replies: card.replies.map((reply) =>
+            reply.id === replyId ? { ...reply, owner_reaction: reaction } : reply
+          )
+        }))
+      );
+    } catch (err) {
+      setError("Unable to send reaction.");
+    } finally {
+      setPostActionId(null);
+    }
+  };
+
   return (
     <Protected>
       <section className="space-y-6">
@@ -143,6 +232,138 @@ export default function InboxPage() {
         {error ? <p className="text-sm text-white/60">{error}</p> : null}
 
         <div className="space-y-4">
+          <div className="space-y-3">
+            <h2 className="text-sm text-white/70">Posts</h2>
+            {postCards.length === 0 ? (
+              <p className="text-sm text-white/60">No post replies yet.</p>
+            ) : (
+              <div className="space-y-4">
+                {postCards.map((card) => (
+                  <div
+                    key={card.post_id}
+                    className="border border-white/10 rounded-2xl p-4 space-y-3"
+                  >
+                    <div className="space-y-1">
+                      <p className="text-xs text-white/50">
+                        {card.post_type} · {formatDate(card.post_created_at)}
+                      </p>
+                      <p className="text-sm text-white/80">{card.post_content}</p>
+                    </div>
+                    {card.replies.length === 0 ? (
+                      <p className="text-xs text-white/50">No replies yet.</p>
+                    ) : (
+                      <div className="max-h-[260px] overflow-y-auto space-y-3 pr-1">
+                        {card.replies.map((reply) => {
+                          const styles = replyStyles[reply.reply_type];
+                          const replyLabel = {
+                            validate: "Validate",
+                            context: "Add Context",
+                            impact: "Highlight Impact",
+                            clarify: "Clarify",
+                            challenge: "Challenge"
+                          }[reply.reply_type];
+                          const reactionLabel = {
+                            thanks: "Thanks",
+                            helpful: "Helpful",
+                            noted: "Noted",
+                            appreciate: "Appreciate it"
+                          };
+                          return (
+                            <div
+                              key={reply.id}
+                              className={`border ${styles.border} border-l-4 rounded-xl p-3 space-y-2`}
+                            >
+                              <div className="flex items-center justify-between gap-2">
+                                <span className={`px-2 py-0.5 text-[10px] rounded-full ${styles.badge}`}>
+                                  {replyLabel}
+                                </span>
+                                <span className="text-[10px] text-white/50">
+                                  {formatDate(reply.created_at)}
+                                </span>
+                              </div>
+                              <div className="text-xs text-white/70">
+                                {reply.sender.full_name} @{reply.sender.username}
+                              </div>
+                              <p className="text-sm text-white/80">{reply.message}</p>
+                              <div className="flex flex-wrap items-center gap-2">
+                                <button
+                                  className={`border px-3 py-1 text-xs rounded-full ${
+                                    reply.caret_given
+                                      ? "border-emerald-400/50 text-emerald-200"
+                                      : "border-white/30 text-white/70"
+                                  }`}
+                                  onClick={() => handleToggleReplyCaret(reply.id)}
+                                  disabled={postActionId === reply.id}
+                                >
+                                  ^ {reply.caret_given ? "Caret" : "Give caret"}
+                                </button>
+                                <select
+                                  className="bg-black border border-white/20 px-2 py-1 text-xs text-white/70"
+                                  value={reply.owner_reaction ?? ""}
+                                  onChange={(event) => {
+                                    const value = event.target.value as PostReplyOwnerReaction;
+                                    if (!value) {
+                                      return;
+                                    }
+                                    handleSendReaction(reply.id, value);
+                                  }}
+                                  disabled={postActionId === reply.id}
+                                >
+                                  <option value="">React</option>
+                                  <option value="thanks">Thanks</option>
+                                  <option value="helpful">Helpful</option>
+                                  <option value="noted">Noted</option>
+                                  <option value="appreciate">Appreciate it</option>
+                                </select>
+                                {reply.owner_reaction ? (
+                                  <span className="text-[10px] text-white/50">
+                                    Sent: {reactionLabel[reply.owner_reaction]}
+                                  </span>
+                                ) : null}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {postNotifications.length === 0 ? null : (
+              <div className="space-y-3">
+                <h3 className="text-xs text-white/60">Updates for you</h3>
+                {postNotifications.map((item) => {
+                  const payload = item.payload_json as Record<string, any>;
+                  if (item.type === "POST_REPLY") {
+                    return (
+                      <div key={item.id} className="border-b border-white/10 pb-3">
+                        <p className="text-sm text-white/80">
+                          {payload.sender?.full_name ?? "Someone"} sent a{" "}
+                          {payload.reply_type} reply.
+                        </p>
+                        <p className="text-xs text-white/60">{payload.reply_message}</p>
+                        <p className="text-xs text-white/40">{formatDate(payload.created_at)}</p>
+                      </div>
+                    );
+                  }
+                  if (item.type === "POST_REPLY_REACTION") {
+                    return (
+                      <div key={item.id} className="border-b border-white/10 pb-3">
+                        <p className="text-sm text-white/80">
+                          {payload.sender?.full_name ?? "Someone"} reacted:{" "}
+                          {payload.reaction}
+                        </p>
+                        <p className="text-xs text-white/40">{formatDate(payload.created_at)}</p>
+                      </div>
+                    );
+                  }
+                  return null;
+                })}
+              </div>
+            )}
+          </div>
           <div className="space-y-3">
             <h2 className="text-sm text-white/70">Caret notifications</h2>
             {caretNotifications.length === 0 ? (

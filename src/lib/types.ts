@@ -346,3 +346,55 @@ export type PostOut = {
   caret_count: number;
   has_caret?: boolean;
 };
+
+export type PostReplyType =
+  | "validate"
+  | "context"
+  | "impact"
+  | "clarify"
+  | "challenge";
+
+export type PostReplyOwnerReaction =
+  | "thanks"
+  | "helpful"
+  | "noted"
+  | "appreciate";
+
+export type PostReplyUser = {
+  id: number;
+  username: string;
+  full_name: string;
+  profile_photo_url?: string | null;
+};
+
+export type PostReplyOut = {
+  id: number;
+  post_id: number;
+  owner_id: number;
+  sender_id: number;
+  recipient_id: number;
+  type: PostReplyType;
+  message: string;
+  created_at: string;
+  sender: PostReplyUser;
+  caret_given: boolean;
+  owner_reaction?: PostReplyOwnerReaction | null;
+};
+
+export type InboxPostReplyOut = {
+  id: number;
+  reply_type: PostReplyType;
+  message: string;
+  created_at: string;
+  sender: PostReplyUser;
+  caret_given: boolean;
+  owner_reaction?: PostReplyOwnerReaction | null;
+};
+
+export type InboxPostCard = {
+  post_id: number;
+  post_type: string;
+  post_content: string;
+  post_created_at: string;
+  replies: InboxPostReplyOut[];
+};

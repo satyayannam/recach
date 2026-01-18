@@ -12,6 +12,7 @@ import type {
   EducationScoreOut,
   FeedItem,
   InboxItem,
+  InboxPostCard,
   LeaderboardRow,
   PendingRecommendation,
   PublicUserOut,
@@ -73,7 +74,9 @@ const protectedPrefixes = [
   "/work",
   "/users/me",
   "/posts",
-  "/api"
+  "/api",
+  "/inbox",
+  "/post-replies"
 ];
 
 const resolvePathname = (url?: string) => {
@@ -372,4 +375,9 @@ export async function getContactForRequest(requestId: string) {
 export async function getInboxItems() {
   const { data } = await api.get("/api/inbox");
   return data as InboxItem[];
+}
+
+export async function getInboxPosts() {
+  const { data } = await api.get("/inbox/posts");
+  return data as InboxPostCard[];
 }

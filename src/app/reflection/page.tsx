@@ -348,6 +348,7 @@ export default function ReflectionPage() {
                 onDelete={handleDelete}
                 canEdit={isOwner}
                 onEdit={handleEdit}
+                canReply={!isOwner}
               />
             </div>
           );

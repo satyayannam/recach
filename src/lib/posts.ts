@@ -2,7 +2,13 @@
 
 import { api } from "@/lib/api";
 import { getToken } from "@/lib/auth";
-import type { PostOut, PostType } from "@/lib/types";
+import type {
+  PostOut,
+  PostReplyOut,
+  PostReplyOwnerReaction,
+  PostReplyType,
+  PostType
+} from "@/lib/types";
 
 export type PostCreatePayload = {
   type: PostType;
@@ -45,4 +51,42 @@ export async function updatePost(postId: number, payload: PostCreatePayload) {
   const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
   const { data } = await api.put(`/posts/${postId}`, payload, { headers });
   return data as PostOut;
+}
+
+export async function createPostReply(
+  postId: number,
+  payload: { type: PostReplyType; message: string; recipient_id?: number | null }
+) {
+  const token = getToken();
+  const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
+  const { data } = await api.post(`/posts/${postId}/replies`, payload, { headers });
+  return data as PostReplyOut;
+}
+
+export async function listPostReplies(postId: number) {
+  const token = getToken();
+  const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
+  const { data } = await api.get(`/posts/${postId}/replies`, { headers });
+  return data as PostReplyOut[];
+}
+
+export async function togglePostReplyCaret(replyId: number) {
+  const token = getToken();
+  const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
+  const { data } = await api.post(`/post-replies/${replyId}/caret`, null, { headers });
+  return data as { reply_id: number; is_given: boolean };
+}
+
+export async function setPostReplyOwnerReaction(
+  replyId: number,
+  reaction: PostReplyOwnerReaction
+) {
+  const token = getToken();
+  const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
+  const { data } = await api.post(
+    `/post-replies/${replyId}/owner-reaction`,
+    { reaction },
+    { headers }
+  );
+  return data as { reply_id: number; reaction: PostReplyOwnerReaction };
 }
